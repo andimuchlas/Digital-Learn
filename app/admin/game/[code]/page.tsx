@@ -14,12 +14,11 @@ import {
   Trophy,
   Users,
   CheckCircle2,
-  Sparkles,
   Volume2,
   VolumeX,
   RotateCcw,
 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getAvatarSrc } from "@/lib/avatars";
@@ -217,7 +216,7 @@ export default function AdminLiveGamePage({ params }: { params: Promise<{ code: 
   const answeredPercentage = players.length > 0 ? (answeredCount / players.length) * 100 : 0;
 
   return (
-    <div className="space-y-6 select-none">
+    <div className="space-y-6 select-none max-w-7xl mx-auto">
       {/* Top Controller Bar */}
       <Card className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-4 sm:p-5 bg-white border-2 border-slate-300 rounded-[32px] shadow-lg">
         <div className="flex items-center gap-3.5">
@@ -301,194 +300,163 @@ export default function AdminLiveGamePage({ params }: { params: Promise<{ code: 
         </div>
       </Card>
 
-      {/* Main Two-Phase Proyektor Display */}
+      {/* EXPLANATION PHASE BANNER (5 SECONDS) */}
       {gameState === "EXPLANATION" && (
-        <Card className="p-8 sm:p-12 rounded-[36px] bg-white border-[3px] border-[#FF5B00] text-center space-y-6 shadow-2xl animate-pop-in">
+        <Card className="p-6 sm:p-8 rounded-[36px] bg-white border-[3px] border-[#FF5B00] text-center space-y-4 shadow-xl animate-pop-in">
+          <span className="text-xs font-black uppercase tracking-widest text-[#FF5B00] font-heading bg-orange-50 px-3 py-1 rounded-full border border-orange-200 inline-block">
+            Bersiap! Permainan Segera Dimulai
+          </span>
+          <h3 className="text-2xl sm:text-4xl font-black text-[#0F172A] font-heading tracking-tight">
+            Kuis Dimulai Dalam:
+          </h3>
           <div>
-            <span className="text-xs font-black uppercase tracking-widest text-[#FF5B00] font-heading bg-orange-50 px-3 py-1 rounded-full border border-orange-200 inline-block mb-2">
-              Aturan Permainan
-            </span>
-            <h3 className="text-3xl sm:text-5xl font-black text-[#0F172A] font-heading tracking-tight">
-              Cara Bermain Kuis
-            </h3>
-            <p className="text-slate-600 text-sm sm:text-base font-bold mt-1">
-              Perhatikan aturan sebelum soal pertama dimulai di layar HP kamu:
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-left max-w-4xl mx-auto">
-            <div className="p-4 rounded-3xl bg-orange-50 border-2 border-orange-200">
-              <span className="text-base font-black font-heading text-[#FF5B00] block mb-1">1. 25 Soal Serentak</span>
-              <p className="text-xs text-slate-700 font-bold leading-relaxed">Semua murid menerima soal yang sama bersamaan.</p>
-            </div>
-            <div className="p-4 rounded-3xl bg-blue-50 border-2 border-blue-200">
-              <span className="text-base font-black font-heading text-[#2563EB] block mb-1">2. Waktu Terbatas</span>
-              <p className="text-xs text-slate-700 font-bold leading-relaxed">Pilih jawaban di HP sebelum timer habis.</p>
-            </div>
-            <div className="p-4 rounded-3xl bg-emerald-50 border-2 border-emerald-200">
-              <span className="text-base font-black font-heading text-[#059669] block mb-1">3. Benar = +1 Petak</span>
-              <p className="text-xs text-slate-700 font-bold leading-relaxed">Karaktermu melompat maju 1 petak di papan.</p>
-            </div>
-            <div className="p-4 rounded-3xl bg-amber-50 border-2 border-amber-200">
-              <span className="text-base font-black font-heading text-[#D97706] block mb-1">4. Puncak Juara</span>
-              <p className="text-xs text-slate-700 font-bold leading-relaxed">Salah atau waktu habis tetap di posisi semula.</p>
-            </div>
-          </div>
-
-          <div className="pt-2">
-            <span className="inline-block font-mono text-7xl sm:text-8xl font-black text-[#FF5B00] animate-bounce">
+            <span className="inline-block font-mono text-6xl sm:text-7xl font-black text-[#FF5B00] animate-bounce">
               {explanationSeconds}
             </span>
+          </div>
+          <p className="text-xs sm:text-sm text-slate-500 font-bold">
+            Semua murid akan menjawab 25 soal secara serentak dari HP masing-masing.
+          </p>
+        </Card>
+      )}
+
+      {/* QUESTION MONITOR CARD (RUNNING / PAUSED) */}
+      {(gameState === "RUNNING" || gameState === "PAUSED") && currentQuestion && (
+        <Card className="p-5 sm:p-7 rounded-[36px] bg-white border-[3px] border-slate-300 shadow-xl space-y-4 animate-pop-in">
+          {/* Top Bar: Question badge & Answered Counter */}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Badge variant="secondary" className="text-xs uppercase tracking-wider font-heading py-1 px-3">
+              Soal #{currentQuestion.questionNumber} dari {currentQuestion.totalQuestions}
+            </Badge>
+
+            <div className="flex items-center gap-3">
+              <span className="text-xs text-slate-700 font-heading font-bold flex items-center gap-1.5 bg-orange-50 px-3 py-1.5 rounded-2xl border border-orange-200">
+                <Users className="w-4 h-4 text-[#FF5B00]" />
+                <strong className="text-[#0F172A] font-black">{answeredCount}</strong> / {players.length} Murid Menjawab
+              </span>
+            </div>
+          </div>
+
+          {/* Answering Progress Bar */}
+          <div className="w-full h-2.5 bg-slate-100 rounded-full overflow-hidden border border-slate-200">
+            <div
+              className="h-full bg-gradient-to-r from-orange-400 to-[#FF5B00] transition-all duration-300 ease-out"
+              style={{ width: `${answeredPercentage}%` }}
+            />
+          </div>
+
+          {/* Timer Countdown Bar */}
+          <TimerBar
+            remainingSeconds={remainingSeconds}
+            totalSeconds={totalSeconds}
+            isPaused={isPaused}
+            enableSound={soundEnabled}
+          />
+
+          {/* Question Text */}
+          <div className="py-2 text-center">
+            <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-[#0F172A] font-heading leading-snug">
+              {currentQuestion.text}
+            </h3>
+          </div>
+
+          {/* Question Options Monitor Pills (For Classroom Reference) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 pt-1">
+            <div className="p-3 rounded-2xl bg-rose-50 border-2 border-rose-200 flex items-center gap-2.5">
+              <span className="w-7 h-7 rounded-xl bg-rose-500 text-white flex items-center justify-center text-xs font-black shrink-0 font-heading">
+                ▲
+              </span>
+              <span className="text-xs sm:text-sm font-bold text-slate-800 truncate">
+                {currentQuestion.optionA}
+              </span>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-blue-50 border-2 border-blue-200 flex items-center gap-2.5">
+              <span className="w-7 h-7 rounded-xl bg-blue-500 text-white flex items-center justify-center text-xs font-black shrink-0 font-heading">
+                ◆
+              </span>
+              <span className="text-xs sm:text-sm font-bold text-slate-800 truncate">
+                {currentQuestion.optionB}
+              </span>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-amber-50 border-2 border-amber-200 flex items-center gap-2.5">
+              <span className="w-7 h-7 rounded-xl bg-amber-500 text-white flex items-center justify-center text-xs font-black shrink-0 font-heading">
+                ●
+              </span>
+              <span className="text-xs sm:text-sm font-bold text-slate-800 truncate">
+                {currentQuestion.optionC}
+              </span>
+            </div>
+
+            {currentQuestion.optionD && (
+              <div className="p-3 rounded-2xl bg-emerald-50 border-2 border-emerald-200 flex items-center gap-2.5">
+                <span className="w-7 h-7 rounded-xl bg-emerald-500 text-white flex items-center justify-center text-xs font-black shrink-0 font-heading">
+                  ■
+                </span>
+                <span className="text-xs sm:text-sm font-bold text-slate-800 truncate">
+                  {currentQuestion.optionD}
+                </span>
+              </div>
+            )}
           </div>
         </Card>
       )}
 
-      {/* FASE 1: QUESTION PHASE (RUNNING / PAUSED) -> Giant Question & 2x2 Big Option Cards for Classroom Projector */}
-      {(gameState === "RUNNING" || gameState === "PAUSED") && currentQuestion && (
-        <div className="space-y-6 animate-pop-in">
-          <Card className="p-6 sm:p-10 rounded-[36px] bg-white border-[3px] border-slate-300 shadow-2xl space-y-6">
-            {/* Top Bar inside Question: Question Number & Answered Counter */}
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <Badge variant="secondary" className="text-xs sm:text-sm uppercase tracking-wider font-heading py-1 px-3.5">
-                Soal #{currentQuestion.questionNumber} dari {currentQuestion.totalQuestions}
-              </Badge>
-
-              <div className="flex items-center gap-3">
-                <span className="text-xs sm:text-sm text-slate-700 font-heading font-bold flex items-center gap-1.5 bg-orange-50 px-3.5 py-1.5 rounded-2xl border border-orange-200">
-                  <Users className="w-4 h-4 text-[#FF5B00]" />
-                  <strong className="text-[#0F172A] text-sm sm:text-base font-black">{answeredCount}</strong> / {players.length} Murid Menjawab
-                </span>
-              </div>
+      {/* INTERMISSION / ANSWER EVALUATION BANNER */}
+      {gameState === "INTERMISSION" && lastResult && (
+        <Card className="p-5 rounded-[32px] bg-emerald-50 border-[3px] border-emerald-500 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl animate-pop-in">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-md">
+              <CheckCircle2 className="w-7 h-7 stroke-[3]" />
             </div>
-
-            {/* Answering Progress Bar */}
-            <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden border-2 border-slate-200">
-              <div
-                className="h-full bg-gradient-to-r from-orange-400 to-[#FF5B00] transition-all duration-300 ease-out"
-                style={{ width: `${answeredPercentage}%` }}
-              />
-            </div>
-
-            {/* Giant Timer Bar */}
-            <TimerBar
-              remainingSeconds={remainingSeconds}
-              totalSeconds={totalSeconds}
-              isPaused={isPaused}
-              enableSound={soundEnabled}
-            />
-
-            {/* Giant Question Text - Readable from back of classroom */}
-            <div className="py-4 sm:py-6 px-2 text-center">
-              <h3 className="text-2xl sm:text-4xl md:text-5xl font-black text-[#0F172A] font-heading leading-tight max-w-4xl mx-auto">
-                {currentQuestion.text}
-              </h3>
-            </div>
-
-            {/* 2x2 Giant Arcade Options Grid on Projector */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
-              {/* Option A (Ruby Red) */}
-              <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-rose-500 to-red-600 border-2 border-red-700 text-white flex items-center gap-4 shadow-lg shadow-rose-500/20">
-                <span className="w-12 h-12 rounded-2xl bg-black/25 flex items-center justify-center text-xl font-black shrink-0 font-heading">
-                  ▲
-                </span>
-                <span className="text-lg sm:text-2xl font-black font-heading leading-tight flex-1">
-                  {currentQuestion.optionA}
-                </span>
-              </div>
-
-              {/* Option B (Cobalt Blue) */}
-              <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-blue-500 to-indigo-600 border-2 border-blue-700 text-white flex items-center gap-4 shadow-lg shadow-blue-500/20">
-                <span className="w-12 h-12 rounded-2xl bg-black/25 flex items-center justify-center text-xl font-black shrink-0 font-heading">
-                  ◆
-                </span>
-                <span className="text-lg sm:text-2xl font-black font-heading leading-tight flex-1">
-                  {currentQuestion.optionB}
-                </span>
-              </div>
-
-              {/* Option C (Golden Amber) */}
-              <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-amber-400 to-orange-500 border-2 border-amber-600 text-white flex items-center gap-4 shadow-lg shadow-amber-500/20">
-                <span className="w-12 h-12 rounded-2xl bg-black/25 flex items-center justify-center text-xl font-black shrink-0 font-heading">
-                  ●
-                </span>
-                <span className="text-lg sm:text-2xl font-black font-heading leading-tight flex-1">
-                  {currentQuestion.optionC}
-                </span>
-              </div>
-
-              {/* Option D (Emerald Green) */}
-              {currentQuestion.optionD && (
-                <div className="p-5 sm:p-6 rounded-3xl bg-gradient-to-r from-emerald-500 to-green-600 border-2 border-emerald-700 text-white flex items-center gap-4 shadow-lg shadow-emerald-500/20">
-                  <span className="w-12 h-12 rounded-2xl bg-black/25 flex items-center justify-center text-xl font-black shrink-0 font-heading">
-                    ■
-                  </span>
-                  <span className="text-lg sm:text-2xl font-black font-heading leading-tight flex-1">
-                    {currentQuestion.optionD}
-                  </span>
-                </div>
-              )}
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {/* FASE 2: EVALUATION / INTERMISSION PHASE -> Full-Width 25-Tile Board with Leap Animations */}
-      {gameState === "INTERMISSION" && (
-        <div className="space-y-6 animate-pop-in">
-          {/* Top Banner: Reveal Correct Answer */}
-          {lastResult && (
-            <Card className="p-5 sm:p-6 rounded-[32px] bg-emerald-50 border-[3px] border-emerald-500 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl">
-              <div className="flex items-center gap-3.5">
-                <div className="w-12 h-12 rounded-2xl bg-emerald-500 text-white flex items-center justify-center shrink-0 shadow-md">
-                  <CheckCircle2 className="w-7 h-7 stroke-[3]" />
-                </div>
-                <div>
-                  <span className="text-xs font-black uppercase tracking-wider text-emerald-700 font-heading">
-                    Evaluasi Soal #{currentQuestion?.questionNumber || ""}
-                  </span>
-                  <h4 className="text-xl sm:text-2xl font-black text-emerald-950 font-heading">
-                    Kunci Jawaban: Opsi {lastResult.correctAnswer.toUpperCase()}
-                  </h4>
-                </div>
-              </div>
-
-              <Badge variant="success" className="text-xs sm:text-sm py-1.5 px-4 font-black">
-                Pemain yang benar melompat maju 1 petak! 🚀
-              </Badge>
-            </Card>
-          )}
-
-          {/* Full Width 25-Tile Game Board */}
-          <GameBoard players={players} activePlayerResult={activePlayerResult} />
-
-          {/* Mini Leaderboard Ticker */}
-          <Card className="p-5 rounded-[32px] bg-white border-2 border-slate-300 shadow-md">
-            <div className="flex items-center gap-2 mb-3">
-              <Trophy className="w-4 h-4 text-amber-500" />
-              <span className="text-xs font-black text-[#0F172A] font-heading uppercase tracking-wider">
-                Posisi Terdepan Saat Ini:
+            <div>
+              <span className="text-xs font-black uppercase tracking-wider text-emerald-700 font-heading">
+                Evaluasi Soal #{currentQuestion?.questionNumber || ""}
               </span>
+              <h4 className="text-xl sm:text-2xl font-black text-emerald-950 font-heading">
+                Kunci Jawaban: Opsi {lastResult.correctAnswer.toUpperCase()}
+              </h4>
             </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
-              {sortedLeaderboard.slice(0, 5).map((p, idx) => (
-                <div
-                  key={p.id}
-                  className="p-2.5 rounded-2xl bg-slate-50 border-2 border-slate-200 flex items-center gap-2 text-xs"
-                >
-                  <span className="font-black text-sm">{idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`}</span>
-                  <div className="w-6 h-6 rounded-lg overflow-hidden border border-slate-300 shrink-0 bg-white">
-                    <img src={getAvatarSrc(p.avatar)} alt={p.name} className="w-full h-full object-cover" />
-                  </div>
-                  <div className="overflow-hidden flex-1">
-                    <p className="font-black text-[#0F172A] truncate font-heading">{p.name}</p>
-                    <p className="text-[10px] text-[#FF5B00] font-bold">Petak {p.tile || 1}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
+          </div>
+
+          <Badge variant="success" className="text-xs sm:text-sm py-1.5 px-4 font-black">
+            Pemain yang benar melompat maju 1 petak! 🚀
+          </Badge>
+        </Card>
       )}
+
+      {/* MAIN GAME BOARD 25 PETAK (SELALU AKTIF & TAMPIL DI PROYEKTOR) */}
+      <div className="space-y-6">
+        <GameBoard players={players} activePlayerResult={activePlayerResult} />
+
+        {/* Live Leaderboard Strip */}
+        <Card className="p-5 rounded-[32px] bg-white border-2 border-slate-300 shadow-md">
+          <div className="flex items-center gap-2 mb-3">
+            <Trophy className="w-4 h-4 text-amber-500" />
+            <span className="text-xs font-black text-[#0F172A] font-heading uppercase tracking-wider">
+              Klasemen Posisi Petak Saat Ini ({players.length} Peserta):
+            </span>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+            {sortedLeaderboard.map((p, idx) => (
+              <div
+                key={p.id}
+                className="p-2.5 rounded-2xl bg-slate-50 border-2 border-slate-200 flex items-center gap-2 text-xs"
+              >
+                <span className="font-black text-sm">{idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `#${idx + 1}`}</span>
+                <div className="w-7 h-7 rounded-lg overflow-hidden border border-slate-300 shrink-0 bg-white shadow-xs">
+                  <img src={getAvatarSrc(p.avatar)} alt={p.name} className="w-full h-full object-cover" />
+                </div>
+                <div className="overflow-hidden flex-1">
+                  <p className="font-black text-[#0F172A] truncate font-heading">{p.name}</p>
+                  <p className="text-[10px] text-[#FF5B00] font-black">Petak {p.tile || 1}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
 
       {/* End Modal */}
       {showEndConfirm && (
