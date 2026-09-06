@@ -41,11 +41,12 @@ class GameManager {
 
   constructor() {
     // Initialize a default room for quick testing
-    this.createRoom("DEMO25", "Kuis Bola Basket SD Kelas 3", DEFAULT_BASKETBALL_BANK.questions, 20);
+    this.createRoom("DEMO25", "Kuis Interaktif", DEFAULT_BASKETBALL_BANK.questions, 20);
   }
 
   public getRoom(code: string): GameRoom | undefined {
-    return this.rooms.get(code.toUpperCase());
+    if (!code) return undefined;
+    return this.rooms.get(code.toUpperCase().trim());
   }
 
   public createRoom(
@@ -55,12 +56,18 @@ class GameManager {
     questionTime: number = 30,
     randomize: boolean = true
   ): GameRoom {
-    const upperCode = code.toUpperCase();
+    const upperCode = (code || "").toUpperCase().trim();
 
-    // Clear existing timer if room exists
+    // Preserve existing room and players if already created
     const existing = this.rooms.get(upperCode);
-    if (existing && existing.timerInterval) {
-      clearInterval(existing.timerInterval);
+    if (existing) {
+      if (title && !existing.title) existing.title = title;
+      if (questionTime) existing.questionTime = questionTime;
+      if (customQuestions && customQuestions.length > 0 && existing.questions.length === 0) {
+        existing.questions = customQuestions;
+        existing.totalQuestions = customQuestions.length;
+      }
+      return existing;
     }
 
     let qList = customQuestions && customQuestions.length > 0
@@ -116,7 +123,7 @@ class GameManager {
   ): { player: Player; room: GameRoom } | { error: string } {
     const room = this.getRoom(code);
     if (!room) {
-      return { error: "Lobby kuis tidak ditemukan!" };
+      return { error: "Lobby kuis tidak ditemukan atau kode salah!" };
     }
 
     const trimmedName = name.trim();

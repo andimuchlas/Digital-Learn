@@ -17,7 +17,18 @@ export default function AdminGameResultPage({ params }: { params: Promise<{ code
   const { socket } = useSocket();
 
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
-  const [gameTitle, setGameTitle] = useState("Kuis Bola Basket Kelas 3 SD");
+  const [gameTitle, setGameTitle] = useState("Kuis Interaktif");
+
+  useEffect(() => {
+    fetch(`/api/games/${code}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.session?.title) {
+          setGameTitle(data.session.title);
+        }
+      })
+      .catch(() => {});
+  }, [code]);
 
   useEffect(() => {
     sound.playVictory();

@@ -1,7 +1,10 @@
 import { createServer } from "http";
 import next from "next";
 import { Server as SocketIOServer } from "socket.io";
-import { gameManager } from "./lib/game-manager";
+import { gameManager, GameRoom } from "./lib/game-manager";
+import { db, gameSessions, questions } from "./db";
+import { eq } from "drizzle-orm";
+import { DEFAULT_BASKETBALL_BANK } from "./lib/default-questions";
 import * as dotenv from "dotenv";
 
 dotenv.config({ path: ".env" });
@@ -12,6 +15,73 @@ const hostname = "0.0.0.0";
 
 const app = next({ dev, hostname, port });
 const handle = app.getRequestHandler();
+
+async function ensureRoom(code: string): Promise<GameRoom | undefined> {
+  if (!code) return undefined;
+  const upperCode = code.toUpperCase().trim();
+  let room = gameManager.getRoom(upperCode);
+  if (room) return room;
+
+  try {
+    const [session] = await db
+      .select()
+      .from(gameSessions)
+      .where(eq(gameSessions.code, upperCode))
+      .limit(1);
+
+    if (session && session.status !== "FINISHED") {
+      let qList: any[] = [];
+      if (session.bankId) {
+        const dbQuestions = await db
+          .select()
+          .from(questions)
+          .where(eq(questions.bankId, session.bankId))
+          .orderBy(questions.orderIndex);
+
+        if (dbQuestions && dbQuestions.length > 0) {
+          qList = dbQuestions.map((q) => ({
+            orderIndex: q.orderIndex,
+            text: q.text,
+            optionA: q.optionA,
+            optionB: q.optionB,
+            optionC: q.optionC,
+            optionD: q.optionD || undefined,
+            correctAnswer: q.correctAnswer,
+          }));
+        }
+      }
+
+      if (qList.length === 0) {
+        const allQ = await db.select().from(questions).limit(25);
+        if (allQ && allQ.length > 0) {
+          qList = allQ.map((q) => ({
+            orderIndex: q.orderIndex,
+            text: q.text,
+            optionA: q.optionA,
+            optionB: q.optionB,
+            optionC: q.optionC,
+            optionD: q.optionD || undefined,
+            correctAnswer: q.correctAnswer,
+          }));
+        } else {
+          qList = [...DEFAULT_BASKETBALL_BANK.questions];
+        }
+      }
+
+      room = gameManager.createRoom(
+        upperCode,
+        session.title || "Kuis Interaktif",
+        qList,
+        session.questionTime || 20
+      );
+      return room;
+    }
+  } catch (err) {
+    console.warn("DB lookup error for room", upperCode, err);
+  }
+
+  return undefined;
+}
 
 app.prepare().then(() => {
   const httpServer = createServer((req, res) => {
@@ -35,10 +105,10 @@ app.prepare().then(() => {
       if (callback) callback({ success: true, room: gameManager.getRoomPublicState(room.code) });
     });
 
-    socket.on("admin:join_lobby", ({ code }, callback) => {
-      const room = gameManager.getRoom(code);
+    socket.on("admin:join_lobby", async ({ code }, callback) => {
+      const room = await ensureRoom(code);
       if (!room) {
-        if (callback) callback({ error: "Lobby tidak ditemukan!" });
+        if (callback) callback({ error: "Lobby kuis tidak ditemukan!" });
         return;
       }
       socket.join(room.code);
@@ -83,7 +153,8 @@ app.prepare().then(() => {
     });
 
     // Player joins / reconnects to lobby
-    socket.on("player:join_lobby", ({ code, name, playerClass, avatar, playerId }, callback) => {
+    socket.on("player:join_lobby", async ({ code, name, playerClass, avatar, playerId }, callback) => {
+      await ensureRoom(code);
       const result = gameManager.joinPlayer(code, name, playerClass, socket.id, avatar, playerId);
       if ("error" in result) {
         if (callback) callback({ error: result.error });
@@ -110,10 +181,10 @@ app.prepare().then(() => {
     });
 
     // Player connects/reconnects on game page
-    socket.on("player:join_game", ({ code, playerId, name }, callback) => {
-      const room = gameManager.getRoom(code);
+    socket.on("player:join_game", async ({ code, playerId, name }, callback) => {
+      const room = await ensureRoom(code);
       if (!room) {
-        if (callback) callback({ error: "Lobby tidak ditemukan!" });
+        if (callback) callback({ error: "Lobby kuis tidak ditemukan!" });
         return;
       }
 
@@ -156,10 +227,10 @@ app.prepare().then(() => {
     });
 
     // Client requests current room state
-    socket.on("room:get_state", ({ code }, callback) => {
-      const room = gameManager.getRoom(code);
+    socket.on("room:get_state", async ({ code }, callback) => {
+      const room = await ensureRoom(code);
       if (!room) {
-        if (callback) callback({ error: "Lobby tidak ditemukan" });
+        if (callback) callback({ error: "Lobby kuis tidak ditemukan!" });
         return;
       }
       socket.join(room.code);
@@ -178,7 +249,6 @@ app.prepare().then(() => {
   });
 
   httpServer.listen(port, () => {
-    console.log(`> 🚀 Quiz Game Server ready on http://localhost:${port}`);
-    console.log(`> 🏀 Seeded with 25 Basketball Questions from question.md`);
+    console.log(`> 🚀 Ready on http://${hostname}:${port}`);
   });
 });

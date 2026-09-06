@@ -33,7 +33,7 @@ export default function PlayerJoinPage({ params }: { params: Promise<{ code: str
   const [selectedAvatar, setSelectedAvatar] = useState("lion");
   const [joined, setJoined] = useState(false);
   const [player, setPlayer] = useState<any>(null);
-  const [gameTitle, setGameTitle] = useState("Kuis Bola Basket Kelas 3 SD");
+  const [gameTitle, setGameTitle] = useState("Kuis Interaktif");
   const [errorMsg, setErrorMsg] = useState("");
   const [loading, setLoading] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
@@ -56,6 +56,15 @@ export default function PlayerJoinPage({ params }: { params: Promise<{ code: str
     } catch (e) {
       // ignore
     }
+
+    fetch(`/api/games/${code}`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && data.session?.title) {
+          setGameTitle(data.session.title);
+        }
+      })
+      .catch(() => {});
   }, [code]);
 
   const toggleSound = () => {
@@ -91,20 +100,29 @@ export default function PlayerJoinPage({ params }: { params: Promise<{ code: str
               setJoined(true);
             }
             if (res?.room) {
+              setGameTitle(res.room.title || "Kuis Interaktif");
               const status = res.room.status;
               if (status === "RUNNING" || status === "EXPLANATION" || status === "INTERMISSION") {
                 router.push(`/join/${code}/game`);
               }
+            }
+            if (res?.error) {
+              setErrorMsg(res.error);
+              setJoined(false);
             }
           }
         );
       } else {
         socket.emit("room:get_state", { code }, (res: any) => {
           if (res?.room) {
+            setGameTitle(res.room.title || "Kuis Interaktif");
             const status = res.room.status;
             if (status === "RUNNING" || status === "EXPLANATION" || status === "INTERMISSION") {
               router.push(`/join/${code}/game`);
             }
+          }
+          if (res?.error) {
+            setErrorMsg(res.error);
           }
         });
       }
@@ -171,6 +189,7 @@ export default function PlayerJoinPage({ params }: { params: Promise<{ code: str
 
         if (res?.error) {
           setErrorMsg(res.error);
+          setJoined(false);
         } else if (res?.success) {
           sound.playJoinPop();
           setPlayer(res.player);
@@ -212,7 +231,7 @@ export default function PlayerJoinPage({ params }: { params: Promise<{ code: str
       <header className="flex items-center justify-between pb-3.5 border-b-2 border-slate-200 w-full">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-[#FF5B00] border-2 border-[#C2410C] flex items-center justify-center text-lg text-white shadow-md font-black">
-            🏀
+            🎮
           </div>
           <div>
             <h1 className="text-sm font-black text-[#0F172A] font-heading tracking-tight">
@@ -253,8 +272,8 @@ export default function PlayerJoinPage({ params }: { params: Promise<{ code: str
 
               <div>
                 <CardTitle className="text-2xl font-black font-heading text-[#0F172A]">Identitas Peserta</CardTitle>
-                <CardDescription className="text-slate-600 mt-1 text-xs">
-                  Pilih karakter hewan favoritmu dan masukkan nama!
+                <CardDescription className="text-slate-600 mt-1 text-xs font-bold">
+                  {gameTitle}
                 </CardDescription>
               </div>
             </CardHeader>
@@ -359,7 +378,7 @@ export default function PlayerJoinPage({ params }: { params: Promise<{ code: str
                     className="w-full flex items-center justify-center gap-3 group cursor-pointer py-6"
                   >
                     <span className="text-base font-black font-heading tracking-wide">
-                      {loading ? "Memasuki Arena..." : "Masuk ke Arena Kuis"}
+                      {loading ? "Memasuki Ruang Kuis..." : "Masuk ke Ruang Kuis"}
                     </span>
                     <ArrowRight className="w-5 h-5 stroke-[3] group-hover:translate-x-1 transition-transform" />
                   </Button>
@@ -380,7 +399,7 @@ export default function PlayerJoinPage({ params }: { params: Promise<{ code: str
                   MENUNGGU GURU MEMULAI KUIS...
                 </h2>
                 <p className="text-xs text-slate-500 font-bold">
-                  Pertanyaan akan otomatis muncul serentak di HP begitu kuis dimulai.
+                  {gameTitle} &bull; Soal akan otomatis muncul begitu kuis dimulai.
                 </p>
               </div>
 
