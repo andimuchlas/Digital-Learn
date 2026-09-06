@@ -81,6 +81,7 @@ export default function PlayerQuizPage({ params }: { params: Promise<{ code: str
             if (curPlayerId) setPlayerId(curPlayerId);
             if (curName) setPlayerName(curName);
             if (parsed.playerClass) setPlayerClass(parsed.playerClass);
+            if (parsed.avatar) setPlayerAvatar(parsed.avatar);
           }
         } catch {}
       }

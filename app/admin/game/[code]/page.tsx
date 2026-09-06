@@ -131,6 +131,7 @@ export default function AdminLiveGamePage({ params }: { params: Promise<{ code: 
             if (updated) {
               return {
                 ...player,
+                avatar: updated.avatar || player.avatar,
                 tile: updated.newTile,
                 correctAnswers: updated.correctAnswers,
               };
@@ -138,6 +139,18 @@ export default function AdminLiveGamePage({ params }: { params: Promise<{ code: 
             return player;
           })
         );
+      }
+    };
+
+    const handlePlayerJoined = (data: any) => {
+      if (data.players) {
+        setPlayers(data.players);
+      } else if (data.player) {
+        setPlayers((prev) => {
+          const exists = prev.some((p) => p.id === data.player.id);
+          if (exists) return prev.map((p) => (p.id === data.player.id ? data.player : p));
+          return [...prev, data.player];
+        });
       }
     };
 
@@ -159,6 +172,7 @@ export default function AdminLiveGamePage({ params }: { params: Promise<{ code: 
       router.push(`/admin/game/${code}/result`);
     };
 
+    socket.on("lobby:player_joined", handlePlayerJoined);
     socket.on("game:explanation_started", handleExplanation);
     socket.on("game:explanation_tick", handleExplanationTick);
     socket.on("game:question_started", handleQuestionStarted);
@@ -171,6 +185,7 @@ export default function AdminLiveGamePage({ params }: { params: Promise<{ code: 
 
     return () => {
       socket.off("connect", joinAdminRoom);
+      socket.off("lobby:player_joined", handlePlayerJoined);
       socket.off("game:explanation_started", handleExplanation);
       socket.off("game:explanation_tick", handleExplanationTick);
       socket.off("game:question_started", handleQuestionStarted);
