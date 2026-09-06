@@ -153,15 +153,12 @@ function LoginForm() {
             <button
               type="submit"
               disabled={loading}
-              className="btn-arcade-orange btn-3d w-full py-4 px-6 rounded-2xl font-black text-sm tracking-wider flex items-center justify-between group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              className="btn-arcade-orange btn-3d w-full py-4 px-6 rounded-2xl font-black text-sm tracking-wider flex items-center justify-center gap-2.5 group cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              <span className="w-5" />
               <span className="font-heading uppercase">
                 {loading ? "MEMVERIFIKASI..." : "MASUK KE PANEL GURU"}
               </span>
-              <div className="w-8 h-8 rounded-xl bg-white text-[#FF5B00] flex items-center justify-center shadow-md group-hover:translate-x-0.5 transition-transform">
-                <ArrowRight className="w-4 h-4 stroke-[3]" />
-              </div>
+              <ArrowRight className="w-4 h-4 stroke-[3] group-hover:translate-x-1 transition-transform" />
             </button>
           </div>
         </form>

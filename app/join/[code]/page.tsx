@@ -340,15 +340,12 @@ export default function PlayerJoinPage({ params }: { params: Promise<{ code: str
                     variant="arcadeOrange"
                     size="lg"
                     disabled={loading}
-                    className="w-full flex items-center justify-between group cursor-pointer py-6"
+                    className="w-full flex items-center justify-center gap-3 group cursor-pointer py-6"
                   >
-                    <span className="w-6" />
                     <span className="text-base font-black font-heading tracking-wide">
                       {loading ? "Memasuki Arena..." : "Masuk ke Arena Kuis"}
                     </span>
-                    <div className="w-9 h-9 rounded-xl bg-white text-[#FF5B00] flex items-center justify-center shadow-md group-hover:translate-x-1 transition-transform">
-                      <ArrowRight className="w-4 h-4 stroke-[3]" />
-                    </div>
+                    <ArrowRight className="w-5 h-5 stroke-[3] group-hover:translate-x-1 transition-transform" />
                   </Button>
                 </div>
               </form>

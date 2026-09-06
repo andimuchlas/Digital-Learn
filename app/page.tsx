@@ -80,15 +80,12 @@ export default function HomePage() {
                 type="submit"
                 variant="arcadeOrange"
                 size="lg"
-                className="w-full py-5 px-8 rounded-2xl flex items-center justify-between group cursor-pointer"
+                className="w-full py-5 px-8 rounded-2xl flex items-center justify-center gap-3 group cursor-pointer"
               >
-                <span className="w-8" />
                 <span className="font-heading uppercase tracking-wider text-base sm:text-lg">
                   MASUK KE RUANG KUIS
                 </span>
-                <div className="w-10 h-10 rounded-xl bg-white text-[#FF5B00] flex items-center justify-center shadow-md group-hover:translate-x-1 transition-transform">
-                  <ArrowRight className="w-5 h-5 stroke-[3]" />
-                </div>
+                <ArrowRight className="w-5 h-5 stroke-[3] group-hover:translate-x-1 transition-transform" />
               </Button>
             </div>
           </form>

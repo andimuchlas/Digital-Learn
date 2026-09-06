@@ -162,15 +162,12 @@ export default function NewGamePage() {
               disabled={loading}
               variant="arcadeOrange"
               size="lg"
-              className="w-full flex items-center justify-between cursor-pointer disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-3 cursor-pointer disabled:opacity-50"
             >
-              <span className="w-8" />
-              <span className="text-sm sm:text-base tracking-wider">
+              <span className="text-sm sm:text-base tracking-wider font-heading uppercase">
                 {loading ? "MEMBUAT RUANG KUIS..." : "BUAT RUANG KUIS SEKARANG"}
               </span>
-              <div className="w-9 h-9 rounded-xl bg-white text-[#FF5B00] flex items-center justify-center shadow-md">
-                <ArrowRight className="w-4 h-4 stroke-[3]" />
-              </div>
+              <ArrowRight className="w-4 h-4 stroke-[3]" />
             </Button>
           </div>
         </form>

@@ -11,12 +11,14 @@ export function useSocket() {
 
   useEffect(() => {
     if (!socketInstance) {
-      socketInstance = io({
+      const socketUrl = process.env.NEXT_PUBLIC_SOCKET_URL || undefined;
+      socketInstance = io(socketUrl, {
         path: "/api/socket",
         autoConnect: true,
         reconnection: true,
         reconnectionAttempts: 10,
         reconnectionDelay: 1000,
+        transports: ["websocket", "polling"],
       });
     }
 
