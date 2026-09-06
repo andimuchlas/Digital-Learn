@@ -16,7 +16,7 @@ import {
   Volume2,
   VolumeX,
 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { getAvatarSrc } from "@/lib/avatars";
 
@@ -225,11 +225,22 @@ export default function PlayerQuizPage({ params }: { params: Promise<{ code: str
 
   const myResultInfo = lastResult?.playerResults?.find((p: any) => p.playerId === playerId);
 
+  const options = currentQ
+    ? [
+        { key: "a" as const, text: currentQ.optionA, symbol: "▲", btnClass: "btn-option-a", ringClass: "ring-rose-400" },
+        { key: "b" as const, text: currentQ.optionB, symbol: "◆", btnClass: "btn-option-b", ringClass: "ring-blue-400" },
+        { key: "c" as const, text: currentQ.optionC, symbol: "●", btnClass: "btn-option-c", ringClass: "ring-amber-400" },
+        ...(currentQ.optionD
+          ? [{ key: "d" as const, text: currentQ.optionD, symbol: "■", btnClass: "btn-option-d", ringClass: "ring-emerald-400" }]
+          : []),
+      ]
+    : [];
+
   return (
-    <main className="h-[100dvh] max-h-[100dvh] overflow-hidden flex flex-col justify-between p-3 sm:p-4 max-w-lg mx-auto w-full select-none bg-slate-50">
+    <main className="min-h-[100dvh] flex flex-col justify-between p-3.5 sm:p-5 max-w-md mx-auto w-full select-none bg-slate-50">
       {/* Top Status Header */}
-      <header className="flex items-center justify-between pb-2.5 border-b-2 border-slate-200 shrink-0">
-        <div className="flex items-center gap-2">
+      <header className="flex items-center justify-between pb-3 border-b-2 border-slate-200 shrink-0">
+        <div className="flex items-center gap-2.5">
           <div className="w-10 h-10 rounded-2xl overflow-hidden border-2 border-orange-300 shadow-xs shrink-0 bg-white">
             <img
               src={getAvatarSrc(playerAvatar)}
@@ -238,18 +249,18 @@ export default function PlayerQuizPage({ params }: { params: Promise<{ code: str
             />
           </div>
           <div className="overflow-hidden">
-            <span className="text-xs sm:text-sm font-black text-[#0F172A] truncate block font-heading">
+            <span className="text-sm font-black text-[#0F172A] truncate block font-heading">
               {playerName || "Peserta"}
             </span>
             {/* Connectivity Indicator */}
-            <div className="flex items-center gap-1 text-[10px] font-bold text-slate-500">
+            <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-500">
               <span className={`w-1.5 h-1.5 rounded-full ${isConnected ? "bg-emerald-500" : "bg-rose-500 animate-ping"}`} />
-              <span>{isConnected ? (playerClass || "Kelas") : "Terputus..."}</span>
+              <span>{isConnected ? (playerClass || "Kelas 3 SD") : "Menghubungkan..."}</span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-2">
           <button
             onClick={toggleSound}
             className="p-2 rounded-xl bg-white border-2 border-slate-200 text-slate-600 hover:text-[#FF5B00] transition-colors cursor-pointer"
@@ -258,7 +269,7 @@ export default function PlayerQuizPage({ params }: { params: Promise<{ code: str
             {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
           </button>
 
-          <Badge variant="amber" className="text-xs py-1 px-2.5 shadow-xs font-heading font-black">
+          <Badge variant="amber" className="text-xs py-1 px-3 shadow-xs font-heading font-black">
             <Trophy className="w-3.5 h-3.5 text-amber-600 fill-current mr-1" />
             <span>Petak {currentTile} / 25</span>
           </Badge>
@@ -267,15 +278,15 @@ export default function PlayerQuizPage({ params }: { params: Promise<{ code: str
 
       {/* Explanation Screen */}
       {gameState === "EXPLANATION" && (
-        <Card className="my-auto py-6 text-center space-y-4 p-6 sm:p-8 rounded-[32px] bg-white border-2 border-slate-300 shadow-xl animate-pop-in">
+        <Card className="my-auto py-8 px-6 text-center space-y-4 rounded-[32px] bg-white border-2 border-slate-300 shadow-xl animate-pop-in">
           <h2 className="text-2xl sm:text-3xl font-black text-[#0F172A] font-heading tracking-tight">
             Kuis Segera Dimulai!
           </h2>
-          <p className="text-xs text-slate-600 font-bold leading-relaxed">
+          <p className="text-xs text-slate-600 font-bold leading-relaxed max-w-xs mx-auto">
             Pilih jawaban yang benar di HP secepat mungkin untuk memajukan karaktermu di layar depan!
           </p>
           <div className="pt-2">
-            <span className="font-mono text-6xl sm:text-7xl font-black text-[#FF5B00] animate-bounce block">
+            <span className="font-mono text-7xl font-black text-[#FF5B00] animate-bounce block">
               {explanationSeconds}
             </span>
           </div>
@@ -284,11 +295,11 @@ export default function PlayerQuizPage({ params }: { params: Promise<{ code: str
 
       {/* Paused Screen */}
       {gameState === "PAUSED" && (
-        <Card className="my-auto py-6 text-center space-y-3 p-6 sm:p-8 rounded-[32px] bg-white border-2 border-amber-400 shadow-xl animate-pop-in">
+        <Card className="my-auto py-8 px-6 text-center space-y-3 rounded-[32px] bg-white border-2 border-amber-400 shadow-xl animate-pop-in">
           <div className="w-14 h-14 rounded-2xl bg-amber-100 border-2 border-amber-300 text-amber-600 flex items-center justify-center mx-auto mb-1 animate-pulse">
             <Pause className="w-8 h-8 stroke-[3]" />
           </div>
-          <h2 className="text-xl sm:text-2xl font-black text-[#0F172A] font-heading">Permainan Dijeda</h2>
+          <h2 className="text-xl font-black text-[#0F172A] font-heading">Permainan Dijeda</h2>
           <p className="text-xs text-slate-500 font-bold">
             Guru sedang menjeda kuis. Mohon tunggu sejenak ya...
           </p>
@@ -297,26 +308,26 @@ export default function PlayerQuizPage({ params }: { params: Promise<{ code: str
 
       {/* Loading / Syncing Question */}
       {gameState !== "EXPLANATION" && gameState !== "PAUSED" && !currentQ && (
-        <Card className="my-auto py-6 text-center space-y-3 p-6 sm:p-8 rounded-[32px] bg-white border-2 border-slate-300 shadow-xl animate-pop-in">
+        <Card className="my-auto py-8 px-6 text-center space-y-3 rounded-[32px] bg-white border-2 border-slate-300 shadow-xl animate-pop-in">
           <div className="w-12 h-12 rounded-2xl bg-orange-100 border-2 border-orange-200 text-[#FF5B00] flex items-center justify-center mx-auto animate-pulse">
             <Sparkles className="w-6 h-6" />
           </div>
-          <h2 className="text-lg sm:text-xl font-black text-[#0F172A] font-heading">Memuat Pertanyaan...</h2>
+          <h2 className="text-lg font-black text-[#0F172A] font-heading">Memuat Pertanyaan...</h2>
           <p className="text-xs text-slate-500 font-bold">Menyinkronkan soal kuis dengan server...</p>
         </Card>
       )}
 
-      {/* Active Question & 2x2 Arcade Options Grid */}
+      {/* Active Question & Proportional Option Buttons */}
       {gameState !== "EXPLANATION" && gameState !== "PAUSED" && currentQ && (
-        <div className="flex-1 flex flex-col justify-between py-1.5 gap-2 overflow-hidden">
+        <div className="my-auto py-3 space-y-3.5 w-full">
           {/* Question Card & Timer */}
-          <Card className="p-3.5 sm:p-4 rounded-3xl bg-white border-2 border-slate-300 shadow-md space-y-2 shrink-0">
+          <Card className="p-4 rounded-3xl bg-white border-2 border-slate-300 shadow-md space-y-2.5">
             <div className="flex items-center justify-between">
               <span className="text-xs font-black text-slate-600 font-heading">
                 Soal {currentQ.questionNumber} dari {currentQ.totalQuestions}
               </span>
               {isLocked && (
-                <Badge variant="success" className="text-[10px] py-0.5 px-2">
+                <Badge variant="success" className="text-[10px] py-0.5 px-2 font-bold">
                   <Lock className="w-3 h-3 mr-1" /> Terkunci
                 </Badge>
               )}
@@ -329,8 +340,8 @@ export default function PlayerQuizPage({ params }: { params: Promise<{ code: str
               enableSound={soundEnabled}
             />
 
-            {/* Question Text with enhanced readability for SD kids */}
-            <h3 className="text-base sm:text-lg font-black text-[#0F172A] font-heading leading-snug text-center pt-1">
+            {/* Question Text */}
+            <h3 className="text-sm sm:text-base font-black text-[#0F172A] font-heading leading-snug text-center pt-1 px-1">
               {currentQ.text}
             </h3>
           </Card>
@@ -338,7 +349,7 @@ export default function PlayerQuizPage({ params }: { params: Promise<{ code: str
           {/* Intermission Result Banner */}
           {gameState === "INTERMISSION" && (
             <div
-              className={`p-3 rounded-2xl border-2 text-center space-y-0.5 shadow-md animate-pop-in shrink-0 ${
+              className={`p-3 rounded-2xl border-2 text-center space-y-0.5 shadow-md animate-pop-in ${
                 myResultInfo?.isCorrect
                   ? "bg-emerald-100 border-emerald-400 text-emerald-950"
                   : "bg-rose-100 border-rose-400 text-rose-950"
@@ -363,104 +374,43 @@ export default function PlayerQuizPage({ params }: { params: Promise<{ code: str
             </div>
           )}
 
-          {/* 2x2 Symmetrical Arcade Option Buttons (Zero Scroll Touch Targets) */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-2.5 flex-1 max-h-[50dvh] items-stretch">
-            {/* Option A (Ruby Crimson ▲) */}
-            <button
-              onClick={() => handleSelectOption("a")}
-              disabled={isLocked || gameState !== "RUNNING"}
-              className={`btn-3d p-3 rounded-2xl text-left font-bold transition-all flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 cursor-pointer ${
-                selectedAnswer === "a"
-                  ? "btn-option-a ring-4 ring-rose-400 scale-[0.98]"
-                  : isLocked
-                  ? "bg-slate-100 border-2 border-slate-200 text-slate-400 opacity-40 cursor-not-allowed"
-                  : "btn-option-a"
-              }`}
-            >
-              <span className="w-8 h-8 rounded-xl bg-black/25 flex items-center justify-center text-sm font-black shrink-0 font-heading text-white">
-                ▲
-              </span>
-              <span className="text-xs sm:text-sm font-black font-heading text-white leading-tight text-center sm:text-left flex-1 line-clamp-2">
-                {currentQ.optionA}
-              </span>
-            </button>
-
-            {/* Option B (Cobalt Sapphire ◆) */}
-            <button
-              onClick={() => handleSelectOption("b")}
-              disabled={isLocked || gameState !== "RUNNING"}
-              className={`btn-3d p-3 rounded-2xl text-left font-bold transition-all flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 cursor-pointer ${
-                selectedAnswer === "b"
-                  ? "btn-option-b ring-4 ring-blue-400 scale-[0.98]"
-                  : isLocked
-                  ? "bg-slate-100 border-2 border-slate-200 text-slate-400 opacity-40 cursor-not-allowed"
-                  : "btn-option-b"
-              }`}
-            >
-              <span className="w-8 h-8 rounded-xl bg-black/25 flex items-center justify-center text-sm font-black shrink-0 font-heading text-white">
-                ◆
-              </span>
-              <span className="text-xs sm:text-sm font-black font-heading text-white leading-tight text-center sm:text-left flex-1 line-clamp-2">
-                {currentQ.optionB}
-              </span>
-            </button>
-
-            {/* Option C (Golden Amber ●) */}
-            <button
-              onClick={() => handleSelectOption("c")}
-              disabled={isLocked || gameState !== "RUNNING"}
-              className={`btn-3d p-3 rounded-2xl text-left font-bold transition-all flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 cursor-pointer ${
-                !currentQ.optionD ? "col-span-2 sm:col-span-2" : ""
-              } ${
-                selectedAnswer === "c"
-                  ? "btn-option-c ring-4 ring-amber-400 scale-[0.98]"
-                  : isLocked
-                  ? "bg-slate-100 border-2 border-slate-200 text-slate-400 opacity-40 cursor-not-allowed"
-                  : "btn-option-c"
-              }`}
-            >
-              <span className="w-8 h-8 rounded-xl bg-black/25 flex items-center justify-center text-sm font-black shrink-0 font-heading text-white">
-                ●
-              </span>
-              <span className="text-xs sm:text-sm font-black font-heading text-white leading-tight text-center sm:text-left flex-1 line-clamp-2">
-                {currentQ.optionC}
-              </span>
-            </button>
-
-            {/* Option D (Emerald Green ■) */}
-            {currentQ.optionD && (
-              <button
-                onClick={() => handleSelectOption("d")}
-                disabled={isLocked || gameState !== "RUNNING"}
-                className={`btn-3d p-3 rounded-2xl text-left font-bold transition-all flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-2 cursor-pointer ${
-                  selectedAnswer === "d"
-                    ? "btn-option-d ring-4 ring-emerald-400 scale-[0.98]"
-                    : isLocked
-                    ? "bg-slate-100 border-2 border-slate-200 text-slate-400 opacity-40 cursor-not-allowed"
-                    : "btn-option-d"
-                }`}
-              >
-                <span className="w-8 h-8 rounded-xl bg-black/25 flex items-center justify-center text-sm font-black shrink-0 font-heading text-white">
-                  ■
-                </span>
-                <span className="text-xs sm:text-sm font-black font-heading text-white leading-tight text-center sm:text-left flex-1 line-clamp-2">
-                  {currentQ.optionD}
-                </span>
-              </button>
-            )}
+          {/* Proportional, Ergonomic Option Buttons */}
+          <div className="space-y-2.5">
+            {options.map((opt) => {
+              const isSelected = selectedAnswer === opt.key;
+              return (
+                <button
+                  key={opt.key}
+                  onClick={() => handleSelectOption(opt.key)}
+                  disabled={isLocked || gameState !== "RUNNING"}
+                  className={`btn-3d w-full min-h-[54px] p-3 rounded-2xl text-left font-bold transition-all flex items-center gap-3 cursor-pointer ${
+                    isSelected
+                      ? `${opt.btnClass} ring-4 ${opt.ringClass} scale-[0.99]`
+                      : isLocked
+                      ? "bg-slate-100 border-2 border-slate-200 text-slate-400 opacity-40 cursor-not-allowed"
+                      : opt.btnClass
+                  }`}
+                >
+                  <span className="w-9 h-9 rounded-xl bg-black/25 flex items-center justify-center text-sm font-black shrink-0 font-heading text-white shadow-inner">
+                    {opt.symbol}
+                  </span>
+                  <span className="text-xs sm:text-sm font-black font-heading text-white leading-snug flex-1">
+                    {opt.text}
+                  </span>
+                </button>
+              );
+            })}
           </div>
+
+          <p className="text-center text-[11px] text-slate-400 font-bold">
+            {isLocked ? "Jawaban sudah dikunci &bull; Menunggu hasil..." : "Pilih salah satu jawaban sebelum waktu habis!"}
+          </p>
         </div>
       )}
 
-      {/* Bottom Footer Status */}
-      <footer className="text-center text-[11px] text-slate-500 py-1 font-medium shrink-0">
-        {isLocked ? (
-          <span className="text-emerald-700 font-black">
-            🔒 Jawaban tersimpan. Menunggu evaluasi...
-          </span>
-        ) : (
-          <span className="text-slate-600 font-bold">Pilih jawabanmu sebelum timer habis!</span>
-        )}
+      {/* Footer Branding */}
+      <footer className="w-full text-center text-xs text-slate-400 pt-2 border-t-2 border-slate-200 font-bold shrink-0">
+        Digital Learn Interactive &bull; Kuis 25 Petak
       </footer>
     </main>
   );
