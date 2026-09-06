@@ -101,6 +101,13 @@ export default function PlayerQuizPage({ params }: { params: Promise<{ code: str
             }
             if (res.player) {
               setCurrentTile(res.player.tile);
+              if (res.player.name) setPlayerName(res.player.name);
+              if (res.player.playerClass) setPlayerClass(res.player.playerClass);
+              if (res.player.avatar) setPlayerAvatar(res.player.avatar);
+              if (res.player.currentAnswer) {
+                setSelectedAnswer(res.player.currentAnswer);
+                setIsLocked(true);
+              }
             }
           }
         }

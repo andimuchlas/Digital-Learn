@@ -111,45 +111,52 @@ class GameManager {
     name: string,
     playerClass: string,
     socketId: string,
-    avatar?: string
+    avatar?: string,
+    existingPlayerId?: string
   ): { player: Player; room: GameRoom } | { error: string } {
     const room = this.getRoom(code);
     if (!room) {
       return { error: "Lobby kuis tidak ditemukan!" };
     }
 
-    if (room.status !== "LOBBY" && room.status !== "EXPLANATION") {
-      // Check if rejoining existing player
-      const existingPlayer = Object.values(room.players).find(
-        (p) => p.name.toLowerCase() === name.trim().toLowerCase()
-      );
-      if (existingPlayer) {
-        existingPlayer.socketId = socketId;
-        existingPlayer.isOnline = true;
-        if (avatar) existingPlayer.avatar = avatar;
-        return { player: existingPlayer, room };
-      }
-      return { error: "Permainan sudah dimulai. Anda tidak dapat bergabung ke sesi ini." };
-    }
-
     const trimmedName = name.trim();
     const trimmedClass = playerClass.trim();
 
-    // Check if name already taken by an active player
-    const nameTaken = Object.values(room.players).some(
-      (p) => p.name.toLowerCase() === trimmedName.toLowerCase() && p.isOnline
-    );
-    if (nameTaken) {
-      return { error: `Nama "${trimmedName}" sudah digunakan di lobby ini. Silakan gunakan nama lain.` };
+    // 1. Reconnect by existing playerId if provided
+    if (existingPlayerId && room.players[existingPlayerId]) {
+      const existing = room.players[existingPlayerId];
+      existing.socketId = socketId;
+      existing.isOnline = true;
+      if (avatar) existing.avatar = avatar;
+      if (trimmedName) existing.name = trimmedName;
+      if (trimmedClass) existing.playerClass = trimmedClass;
+      return { player: existing, room };
     }
 
-    // Create or reconnect player
-    const playerId = `p_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
+    // 2. Reconnect by matching name if already in room
+    const existingPlayer = Object.values(room.players).find(
+      (p) => p.name.toLowerCase() === trimmedName.toLowerCase()
+    );
+    if (existingPlayer) {
+      existingPlayer.socketId = socketId;
+      existingPlayer.isOnline = true;
+      if (avatar) existingPlayer.avatar = avatar;
+      if (trimmedClass) existingPlayer.playerClass = trimmedClass;
+      return { player: existingPlayer, room };
+    }
+
+    // 3. If game is already running and player was never registered, reject
+    if (room.status !== "LOBBY" && room.status !== "EXPLANATION") {
+      return { error: "Permainan sudah dimulai. Anda tidak dapat bergabung ke sesi ini." };
+    }
+
+    // 4. Create new player
+    const playerId = existingPlayerId || `p_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
     const player: Player = {
       id: playerId,
       name: trimmedName,
       playerClass: trimmedClass,
-      avatar: avatar || "🏀",
+      avatar: avatar || "lion",
       socketId,
       tile: 1,
       correctAnswers: 0,

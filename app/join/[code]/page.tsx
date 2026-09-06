@@ -12,8 +12,10 @@ import {
   Clock,
   Volume2,
   VolumeX,
+  UserCheck,
+  RotateCcw,
 } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -33,17 +35,22 @@ export default function PlayerJoinPage({ params }: { params: Promise<{ code: str
   const [loading, setLoading] = useState(false);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
+  // Restore player session from localStorage immediately on mount
   useEffect(() => {
-    const savedPlayer = localStorage.getItem(`quiz_player_${code}`);
-    if (savedPlayer) {
-      try {
-        const parsed = JSON.parse(savedPlayer);
-        setName(parsed.name || "");
-        setPlayerClass(parsed.playerClass || "3 SD");
-        if (parsed.avatar) setSelectedAvatar(parsed.avatar);
-      } catch (e) {
-        // ignore
+    try {
+      const saved = localStorage.getItem(`quiz_player_${code}`);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.name) {
+          setName(parsed.name);
+          setPlayerClass(parsed.playerClass || "3 SD");
+          if (parsed.avatar) setSelectedAvatar(parsed.avatar);
+          setPlayer(parsed);
+          setJoined(true);
+        }
       }
+    } catch (e) {
+      // ignore
     }
   }, [code]);
 
@@ -53,22 +60,54 @@ export default function PlayerJoinPage({ params }: { params: Promise<{ code: str
     sound.setEnabled(next);
   };
 
+  // Rejoin room seamlessly on socket connection/reconnect
   useEffect(() => {
     if (!socket) return;
 
-    const checkAndRedirect = () => {
-      socket.emit("room:get_state", { code }, (res: any) => {
-        if (res?.room) {
-          const status = res.room.status;
-          if (status === "RUNNING" || status === "EXPLANATION" || status === "INTERMISSION") {
-            router.push(`/join/${code}/game`);
+    const rejoinAndCheckState = () => {
+      let saved = null;
+      try {
+        const raw = localStorage.getItem(`quiz_player_${code}`);
+        if (raw) saved = JSON.parse(raw);
+      } catch {}
+
+      if (saved && saved.name) {
+        socket.emit(
+          "player:join_lobby",
+          {
+            code,
+            name: saved.name,
+            playerClass: saved.playerClass,
+            avatar: saved.avatar,
+            playerId: saved.id,
+          },
+          (res: any) => {
+            if (res?.player) {
+              setPlayer(res.player);
+              setJoined(true);
+            }
+            if (res?.room) {
+              const status = res.room.status;
+              if (status === "RUNNING" || status === "EXPLANATION" || status === "INTERMISSION") {
+                router.push(`/join/${code}/game`);
+              }
+            }
           }
-        }
-      });
+        );
+      } else {
+        socket.emit("room:get_state", { code }, (res: any) => {
+          if (res?.room) {
+            const status = res.room.status;
+            if (status === "RUNNING" || status === "EXPLANATION" || status === "INTERMISSION") {
+              router.push(`/join/${code}/game`);
+            }
+          }
+        });
+      }
     };
 
-    checkAndRedirect();
-    socket.on("connect", checkAndRedirect);
+    rejoinAndCheckState();
+    socket.on("connect", rejoinAndCheckState);
 
     const handleStart = () => {
       router.push(`/join/${code}/game`);
@@ -78,7 +117,7 @@ export default function PlayerJoinPage({ params }: { params: Promise<{ code: str
     socket.on("game:question_started", handleStart);
 
     return () => {
-      socket.off("connect", checkAndRedirect);
+      socket.off("connect", rejoinAndCheckState);
       socket.off("game:explanation_started", handleStart);
       socket.off("game:question_started", handleStart);
     };
@@ -92,6 +131,16 @@ export default function PlayerJoinPage({ params }: { params: Promise<{ code: str
     setLoading(true);
     sound.playClick();
 
+    // Check if rejoining existing saved player
+    let existingId: string | undefined = undefined;
+    try {
+      const raw = localStorage.getItem(`quiz_player_${code}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.id) existingId = parsed.id;
+      }
+    } catch {}
+
     socket.emit(
       "player:join_lobby",
       {
@@ -99,6 +148,7 @@ export default function PlayerJoinPage({ params }: { params: Promise<{ code: str
         name: name.trim(),
         playerClass: playerClass.trim(),
         avatar: selectedAvatar,
+        playerId: existingId,
       },
       (res: any) => {
         setLoading(false);
@@ -130,6 +180,13 @@ export default function PlayerJoinPage({ params }: { params: Promise<{ code: str
         }
       }
     );
+  };
+
+  const handleChangeProfile = () => {
+    sound.playClick();
+    localStorage.removeItem(`quiz_player_${code}`);
+    setJoined(false);
+    setPlayer(null);
   };
 
   return (
@@ -164,9 +221,8 @@ export default function PlayerJoinPage({ params }: { params: Promise<{ code: str
       {/* Main Content Area */}
       <div className="my-auto py-4 w-full">
         {!joined ? (
-          /* Registration Form Card with 4 Cute Animal Avatar Selector */
+          /* Registration Form Card */
           <Card className="bg-white border-2 border-slate-300 shadow-xl overflow-hidden animate-pop-in">
-            {/* Card Header with Active Avatar Preview */}
             <CardHeader className="text-center pb-3 pt-6 space-y-3 bg-gradient-to-b from-orange-50/70 to-transparent">
               <div className="relative mx-auto w-fit">
                 <div className="w-24 h-24 rounded-3xl overflow-hidden border-4 border-white shadow-2xl shadow-[#FF5B00]/30 bg-white">
@@ -295,7 +351,7 @@ export default function PlayerJoinPage({ params }: { params: Promise<{ code: str
             </CardContent>
           </Card>
         ) : (
-          /* Clean, Large Waiting Room Screen */
+          /* Clean, Persistent Waiting Room Screen */
           <div className="space-y-5 animate-pop-in">
             <Card className="bg-white border-2 border-slate-300 rounded-[36px] shadow-2xl p-7 text-center space-y-6">
               {/* Animal Avatar Icon */}
@@ -311,9 +367,12 @@ export default function PlayerJoinPage({ params }: { params: Promise<{ code: str
 
               {/* Name & Class (Large & Bold) */}
               <div className="space-y-1">
-                <h2 className="text-3xl sm:text-4xl font-black text-[#0F172A] font-heading tracking-tight">
-                  {player?.name}
-                </h2>
+                <div className="flex items-center justify-center gap-2">
+                  <h2 className="text-3xl sm:text-4xl font-black text-[#0F172A] font-heading tracking-tight">
+                    {player?.name}
+                  </h2>
+                  <span title="Tersambung"><UserCheck className="w-6 h-6 text-emerald-600" /></span>
+                </div>
                 <p className="text-sm font-black text-[#FF5B00] font-heading uppercase tracking-wider">
                   {player?.playerClass || "Kelas 3 SD"}
                 </p>
@@ -330,6 +389,18 @@ export default function PlayerJoinPage({ params }: { params: Promise<{ code: str
                 <p className="text-xs text-slate-500 font-bold">
                   Soal kuis akan otomatis muncul serentak di HP begitu guru memulai.
                 </p>
+              </div>
+
+              {/* Reset/Change Profile Button */}
+              <div className="pt-1">
+                <button
+                  type="button"
+                  onClick={handleChangeProfile}
+                  className="text-xs font-bold text-slate-400 hover:text-[#FF5B00] flex items-center justify-center gap-1.5 mx-auto transition-colors cursor-pointer"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Ganti Karakter / Nama Lain</span>
+                </button>
               </div>
             </Card>
           </div>

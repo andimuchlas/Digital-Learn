@@ -99,9 +99,9 @@ io.on("connection", (socket) => {
     gameManager.finishGame(code, io);
   });
 
-  // Player joins lobby
-  socket.on("player:join_lobby", ({ code, name, playerClass, avatar }, callback) => {
-    const result = gameManager.joinPlayer(code, name, playerClass, socket.id, avatar);
+  // Player joins / reconnects to lobby
+  socket.on("player:join_lobby", ({ code, name, playerClass, avatar, playerId }, callback) => {
+    const result = gameManager.joinPlayer(code, name, playerClass, socket.id, avatar, playerId);
     if ("error" in result) {
       if (callback) callback({ error: result.error });
       return;
