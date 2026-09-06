@@ -6,6 +6,7 @@
     "dev": "bun server.ts",
     "build": "next build",
     "start": "NODE_ENV=production bun server.ts",
+    "start:socket": "bun socket-server.ts",
     "db:generate": "drizzle-kit generate",
     "db:push": "drizzle-kit push",
     "db:seed": "bun db/seed.ts",
