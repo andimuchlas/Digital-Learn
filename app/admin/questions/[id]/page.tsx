@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useState, use, useMemo } from "react";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   BookOpen,
@@ -17,11 +17,15 @@ import {
   Sparkles,
   HelpCircle,
   AlertTriangle,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { sound } from "@/lib/sound";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+
+const QUESTIONS_PER_PAGE = 10;
 
 interface QuestionItem {
   id?: string;
@@ -56,6 +60,7 @@ export default function BankQuestionsDetailPage({
   const [questionsList, setQuestionsList] = useState<QuestionItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Add Question Modal State
   const [showAddModal, setShowAddModal] = useState(false);
@@ -109,14 +114,45 @@ export default function BankQuestionsDetailPage({
     fetchBankDetail();
   }, [bankId]);
 
-  const filteredQuestions = questionsList.filter(
-    (q) =>
-      q.text.toLowerCase().includes(search.toLowerCase()) ||
-      q.optionA.toLowerCase().includes(search.toLowerCase()) ||
-      q.optionB.toLowerCase().includes(search.toLowerCase()) ||
-      q.optionC.toLowerCase().includes(search.toLowerCase()) ||
-      (q.optionD && q.optionD.toLowerCase().includes(search.toLowerCase()))
-  );
+  const filteredQuestions = useMemo(() => {
+    const query = search.toLowerCase().trim();
+    if (!query) return questionsList;
+    return questionsList.filter(
+      (q) =>
+        q.text.toLowerCase().includes(query) ||
+        q.optionA.toLowerCase().includes(query) ||
+        q.optionB.toLowerCase().includes(query) ||
+        q.optionC.toLowerCase().includes(query) ||
+        (q.optionD && q.optionD.toLowerCase().includes(query))
+    );
+  }, [questionsList, search]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search]);
+
+  const totalPages = Math.ceil(filteredQuestions.length / QUESTIONS_PER_PAGE) || 1;
+
+  const paginatedQuestions = useMemo(() => {
+    const startIdx = (currentPage - 1) * QUESTIONS_PER_PAGE;
+    return filteredQuestions.slice(startIdx, startIdx + QUESTIONS_PER_PAGE);
+  }, [filteredQuestions, currentPage]);
+
+  const paginationRange = useMemo(() => {
+    const delta = 1;
+    const range: (number | string)[] = [];
+    const left = Math.max(1, currentPage - delta);
+    const right = Math.min(totalPages, currentPage + delta);
+
+    for (let i = 1; i <= totalPages; i++) {
+      if (i === 1 || i === totalPages || (i >= left && i <= right)) {
+        range.push(i);
+      } else if (range[range.length - 1] !== "...") {
+        range.push("...");
+      }
+    }
+    return range;
+  }, [currentPage, totalPages]);
 
   // Add Question Handler
   const handleAddQuestion = async (e: React.FormEvent) => {
@@ -377,8 +413,17 @@ export default function BankQuestionsDetailPage({
           placeholder="Cari pertanyaan atau opsi jawaban di modul ini..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-12 pr-5 py-3.5 bg-white border-2 border-slate-300 rounded-2xl text-xs text-[#0F172A] placeholder:text-slate-400 focus:outline-none focus:border-[#FF5B00] transition-colors shadow-sm font-bold"
+          className="w-full pl-12 pr-10 py-3.5 bg-white border-2 border-slate-300 rounded-2xl text-xs text-[#0F172A] placeholder:text-slate-400 focus:outline-none focus:border-[#FF5B00] transition-colors shadow-sm font-bold"
         />
+        {search && (
+          <button
+            type="button"
+            onClick={() => setSearch("")}
+            className="absolute right-4 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700 cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* Questions Grid */}
@@ -412,112 +457,194 @@ export default function BankQuestionsDetailPage({
           </button>
         </div>
       ) : filteredQuestions.length === 0 ? (
-        <div className="text-center py-12 bg-white rounded-[36px] border-2 border-slate-300">
+        <div className="text-center py-12 bg-white rounded-[36px] border-2 border-slate-300 space-y-2">
           <p className="text-sm font-black text-slate-600 font-heading">
             Tidak ada soal yang cocok dengan pencarian "{search}"
           </p>
+          <button
+            type="button"
+            onClick={() => setSearch("")}
+            className="text-xs font-black text-[#FF5B00] hover:underline cursor-pointer"
+          >
+            Reset Pencarian
+          </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {filteredQuestions.map((q, idx) => {
-            const actualIndex = questionsList.findIndex((item) => item === q);
-            const displayNumber = q.orderIndex || idx + 1;
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {paginatedQuestions.map((q, idx) => {
+              const actualIndex = questionsList.findIndex((item) => item === q);
+              const displayNumber = q.orderIndex || (currentPage - 1) * QUESTIONS_PER_PAGE + idx + 1;
 
-            return (
-              <div
-                key={q.id || idx}
-                className="bg-white p-5 sm:p-6 rounded-[32px] border-2 border-slate-300 hover:border-slate-400 transition-all space-y-4 shadow-sm flex flex-col justify-between"
-              >
-                <div className="space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <span className="px-3 py-1 rounded-xl bg-orange-100 text-[#FF5B00] font-heading text-xs font-black shrink-0 border border-orange-200">
-                      #{displayNumber}
-                    </span>
-                    <p className="flex-1 text-sm font-black text-[#0F172A] font-heading leading-snug">
-                      {q.text}
-                    </p>
-                    <div className="flex items-center gap-1 shrink-0">
-                      <button
-                        onClick={() => handleOpenEditQuestion(q, actualIndex >= 0 ? actualIndex : idx)}
-                        className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
-                        title="Edit Soal"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => handleOpenDeleteQuestion(actualIndex >= 0 ? actualIndex : idx)}
-                        className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                        title="Hapus Soal"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Options grid */}
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div
-                      className={`p-3 rounded-2xl border-2 flex items-center justify-between ${
-                        q.correctAnswer === "a"
-                          ? "bg-emerald-100 border-emerald-400 text-emerald-950 font-black"
-                          : "bg-slate-50 border-slate-200 text-slate-700 font-bold"
-                      }`}
-                    >
-                      <span className="truncate">A. {q.optionA}</span>
-                      {q.correctAnswer === "a" && (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-700 stroke-[3] shrink-0 ml-1" />
-                      )}
+              return (
+                <div
+                  key={q.id || idx}
+                  className="bg-white p-5 sm:p-6 rounded-[32px] border-2 border-slate-300 hover:border-slate-400 transition-all space-y-4 shadow-sm flex flex-col justify-between"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-start justify-between gap-3">
+                      <span className="px-3 py-1 rounded-xl bg-orange-100 text-[#FF5B00] font-heading text-xs font-black shrink-0 border border-orange-200">
+                        #{displayNumber}
+                      </span>
+                      <p className="flex-1 text-sm font-black text-[#0F172A] font-heading leading-snug">
+                        {q.text}
+                      </p>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          onClick={() => handleOpenEditQuestion(q, actualIndex >= 0 ? actualIndex : idx)}
+                          className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                          title="Edit Soal"
+                        >
+                          <Pencil className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleOpenDeleteQuestion(actualIndex >= 0 ? actualIndex : idx)}
+                          className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                          title="Hapus Soal"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
 
-                    <div
-                      className={`p-3 rounded-2xl border-2 flex items-center justify-between ${
-                        q.correctAnswer === "b"
-                          ? "bg-emerald-100 border-emerald-400 text-emerald-950 font-black"
-                          : "bg-slate-50 border-slate-200 text-slate-700 font-bold"
-                      }`}
-                    >
-                      <span className="truncate">B. {q.optionB}</span>
-                      {q.correctAnswer === "b" && (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-700 stroke-[3] shrink-0 ml-1" />
-                      )}
-                    </div>
-
-                    <div
-                      className={`p-3 rounded-2xl border-2 flex items-center justify-between ${
-                        q.correctAnswer === "c"
-                          ? "bg-emerald-100 border-emerald-400 text-emerald-950 font-black"
-                          : "bg-slate-50 border-slate-200 text-slate-700 font-bold"
-                      }`}
-                    >
-                      <span className="truncate">C. {q.optionC}</span>
-                      {q.correctAnswer === "c" && (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-700 stroke-[3] shrink-0 ml-1" />
-                      )}
-                    </div>
-
-                    {q.optionD ? (
+                    {/* Options grid */}
+                    <div className="grid grid-cols-2 gap-2 text-xs">
                       <div
                         className={`p-3 rounded-2xl border-2 flex items-center justify-between ${
-                          q.correctAnswer === "d"
+                          q.correctAnswer === "a"
                             ? "bg-emerald-100 border-emerald-400 text-emerald-950 font-black"
                             : "bg-slate-50 border-slate-200 text-slate-700 font-bold"
                         }`}
                       >
-                        <span className="truncate">D. {q.optionD}</span>
-                        {q.correctAnswer === "d" && (
+                        <span className="truncate">A. {q.optionA}</span>
+                        {q.correctAnswer === "a" && (
                           <CheckCircle2 className="w-4 h-4 text-emerald-700 stroke-[3] shrink-0 ml-1" />
                         )}
                       </div>
-                    ) : (
-                      <div className="p-3 rounded-2xl border-2 border-dashed border-slate-200 text-slate-300 font-bold text-center flex items-center justify-center">
-                        <span className="text-[11px]">- Opsi D Kosong -</span>
+
+                      <div
+                        className={`p-3 rounded-2xl border-2 flex items-center justify-between ${
+                          q.correctAnswer === "b"
+                            ? "bg-emerald-100 border-emerald-400 text-emerald-950 font-black"
+                            : "bg-slate-50 border-slate-200 text-slate-700 font-bold"
+                        }`}
+                      >
+                        <span className="truncate">B. {q.optionB}</span>
+                        {q.correctAnswer === "b" && (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-700 stroke-[3] shrink-0 ml-1" />
+                        )}
                       </div>
-                    )}
+
+                      <div
+                        className={`p-3 rounded-2xl border-2 flex items-center justify-between ${
+                          q.correctAnswer === "c"
+                            ? "bg-emerald-100 border-emerald-400 text-emerald-950 font-black"
+                            : "bg-slate-50 border-slate-200 text-slate-700 font-bold"
+                        }`}
+                      >
+                        <span className="truncate">C. {q.optionC}</span>
+                        {q.correctAnswer === "c" && (
+                          <CheckCircle2 className="w-4 h-4 text-emerald-700 stroke-[3] shrink-0 ml-1" />
+                        )}
+                      </div>
+
+                      {q.optionD ? (
+                        <div
+                          className={`p-3 rounded-2xl border-2 flex items-center justify-between ${
+                            q.correctAnswer === "d"
+                              ? "bg-emerald-100 border-emerald-400 text-emerald-950 font-black"
+                              : "bg-slate-50 border-slate-200 text-slate-700 font-bold"
+                          }`}
+                        >
+                          <span className="truncate">D. {q.optionD}</span>
+                          {q.correctAnswer === "d" && (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-700 stroke-[3] shrink-0 ml-1" />
+                          )}
+                        </div>
+                      ) : (
+                        <div className="p-3 rounded-2xl border-2 border-dashed border-slate-200 text-slate-300 font-bold text-center flex items-center justify-center">
+                          <span className="text-[11px]">- Opsi D Kosong -</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
+              );
+            })}
+          </div>
+
+          {/* Pagination Controls */}
+          {totalPages > 1 && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white p-4 sm:p-5 rounded-[28px] border-2 border-slate-300 shadow-sm">
+              <span className="text-xs font-bold text-slate-500">
+                Menampilkan{" "}
+                <span className="text-[#0F172A] font-black">
+                  {(currentPage - 1) * QUESTIONS_PER_PAGE + 1} -{" "}
+                  {Math.min(currentPage * QUESTIONS_PER_PAGE, filteredQuestions.length)}
+                </span>{" "}
+                dari <span className="text-[#0F172A] font-black">{filteredQuestions.length}</span> soal
+              </span>
+
+              <div className="flex items-center gap-1.5">
+                <button
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() => {
+                    sound.playClick();
+                    setCurrentPage((p) => Math.max(1, p - 1));
+                  }}
+                  className="px-3 py-2 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-700 text-xs font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                  <span>Sebelumnya</span>
+                </button>
+
+                <div className="flex items-center gap-1">
+                  {paginationRange.map((item, idx) => {
+                    if (item === "...") {
+                      return (
+                        <span key={`dots-${idx}`} className="px-1.5 text-slate-400 font-black text-xs">
+                          ...
+                        </span>
+                      );
+                    }
+                    const pageNum = item as number;
+                    const isActive = pageNum === currentPage;
+                    return (
+                      <button
+                        key={pageNum}
+                        type="button"
+                        onClick={() => {
+                          sound.playClick();
+                          setCurrentPage(pageNum);
+                        }}
+                        className={`w-8 h-8 rounded-xl border-2 text-xs font-black font-heading transition-all cursor-pointer flex items-center justify-center ${
+                          isActive
+                            ? "bg-[#FF5B00] border-[#C2410C] text-white shadow-xs"
+                            : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
+                        }`}
+                      >
+                        {pageNum}
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() => {
+                    sound.playClick();
+                    setCurrentPage((p) => Math.min(totalPages, p + 1));
+                  }}
+                  className="px-3 py-2 rounded-xl border-2 border-slate-200 bg-slate-50 text-slate-700 text-xs font-bold hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer flex items-center gap-1"
+                >
+                  <span>Berikutnya</span>
+                  <ChevronRight className="w-4 h-4" />
+                </button>
               </div>
-            );
-          })}
+            </div>
+          )}
         </div>
       )}
 
