@@ -55,7 +55,7 @@ export default function AdminDashboardPage() {
             <Button asChild variant="arcadeWhite" size="lg">
               <Link href="/admin/questions" onClick={() => sound.playClick()}>
                 <BookOpen className="w-4 h-4 text-[#FF5B00] mr-1" />
-                <span>Kelola Soal</span>
+                <span>Bank Soal</span>
               </Link>
             </Button>
           </div>
@@ -70,7 +70,7 @@ export default function AdminDashboardPage() {
           </div>
           <div>
             <p className="text-xs font-black text-slate-500 uppercase tracking-wider font-heading">
-              Total Bank Soal
+              Total Modul Bank
             </p>
             <p className="text-3xl font-black text-[#0F172A] font-heading mt-0.5">
               {banks.length || 1}
@@ -84,10 +84,10 @@ export default function AdminDashboardPage() {
           </div>
           <div>
             <p className="text-xs font-black text-slate-500 uppercase tracking-wider font-heading">
-              Soal Siap Dimainkan
+              Total Soal Terdaftar
             </p>
             <p className="text-3xl font-black text-[#0F172A] font-heading mt-0.5">
-              {banks[0]?.questionsCount || 25} Soal
+              {banks.reduce((sum, b) => sum + (b.questionsCount || 0), 0) || 25} Soal
             </p>
           </div>
         </Card>
@@ -112,13 +112,13 @@ export default function AdminDashboardPage() {
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-black text-[#0F172A] flex items-center gap-2 font-heading">
             <BookOpen className="w-5 h-5 text-[#FF5B00]" />
-            <span>Bank Soal Aktif</span>
+            <span>Modul Bank Soal Aktif</span>
           </h3>
           <Link
             href="/admin/questions"
             className="text-xs font-black text-[#FF5B00] hover:text-[#C2410C] transition-colors font-heading flex items-center gap-1"
           >
-            <span>Semua Soal</span> &rarr;
+            <span>Semua Bank Soal</span> &rarr;
           </Link>
         </div>
 
@@ -131,7 +131,7 @@ export default function AdminDashboardPage() {
               <div>
                 <div className="flex items-center justify-between mb-3">
                   <Badge variant="default">
-                    {bank.questionsCount || 25} Pertanyaan Pilihan Ganda
+                    {bank.questionsCount || 0} Pertanyaan Pilihan Ganda
                   </Badge>
                   <span className="text-xs text-slate-500 flex items-center gap-1 font-mono font-bold">
                     <Clock className="w-3.5 h-3.5" /> 20-30s / soal
@@ -139,16 +139,16 @@ export default function AdminDashboardPage() {
                 </div>
                 <h4 className="text-lg font-black text-[#0F172A] font-heading">{bank.title}</h4>
                 <p className="text-xs text-slate-600 mt-1.5 line-clamp-2 leading-relaxed font-bold">
-                  {bank.description}
+                  {bank.description || "Tidak ada deskripsi"}
                 </p>
               </div>
 
               <div className="flex items-center gap-3 pt-4 border-t-2 border-slate-100">
                 <Button asChild variant="arcadeOrange" className="flex-1">
-                  <Link href="/admin/games/new">Gunakan untuk Kuis</Link>
+                  <Link href={`/admin/games/new?bankId=${bank.id}`}>Gunakan untuk Kuis</Link>
                 </Button>
                 <Button asChild variant="arcadeWhite">
-                  <Link href="/admin/questions">Edit Soal</Link>
+                  <Link href={`/admin/questions/${bank.id}`}>Kelola Soal</Link>
                 </Button>
               </div>
             </Card>

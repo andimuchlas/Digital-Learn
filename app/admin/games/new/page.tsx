@@ -21,14 +21,18 @@ export default function NewGamePage() {
   const timerOptions = [10, 15, 20, 30, 45, 60];
 
   useEffect(() => {
+    const urlParams = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+    const targetBankId = urlParams?.get("bankId");
+
     fetch("/api/questions")
       .then((res) => res.json())
       .then((data) => {
         if (data.banks && data.banks.length > 0) {
           setBanks(data.banks);
-          const first = data.banks[0];
-          setSelectedBankId(first.id);
-          setTitle(first.title || "Kuis Interaktif");
+          const matched = targetBankId ? data.banks.find((b: any) => b.id === targetBankId) : null;
+          const chosen = matched || data.banks[0];
+          setSelectedBankId(chosen.id);
+          setTitle(chosen.title || "Kuis Interaktif");
         }
       })
       .catch((err) => console.warn("Failed to load question banks:", err));

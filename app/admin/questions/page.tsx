@@ -2,308 +2,576 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { BookOpen, Plus, Search, CheckCircle2, Trash2, X } from "lucide-react";
-import { DEFAULT_BASKETBALL_BANK } from "@/lib/default-questions";
+import { useRouter } from "next/navigation";
+import {
+  BookOpen,
+  Plus,
+  Search,
+  FolderOpen,
+  Play,
+  Pencil,
+  Trash2,
+  X,
+  HelpCircle,
+  Clock,
+  Layers,
+  Sparkles,
+  ArrowRight,
+  AlertTriangle,
+} from "lucide-react";
 import { sound } from "@/lib/sound";
+import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
-export default function QuestionsManagerPage() {
-  const [questionsList, setQuestionsList] = useState<any[]>(DEFAULT_BASKETBALL_BANK.questions);
-  const [bankTitle, setBankTitle] = useState(DEFAULT_BASKETBALL_BANK.title);
+interface BankItem {
+  id: string;
+  title: string;
+  description?: string | null;
+  questionsCount?: number;
+  createdAt?: string;
+}
+
+export default function QuestionBanksPage() {
+  const router = useRouter();
+  const [banks, setBanks] = useState<BankItem[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [showAddModal, setShowAddModal] = useState(false);
 
-  // New question form state
-  const [newText, setNewText] = useState("");
-  const [newOptA, setNewOptA] = useState("");
-  const [newOptB, setNewOptB] = useState("");
-  const [newOptC, setNewOptC] = useState("");
-  const [newOptD, setNewOptD] = useState("");
-  const [newCorrect, setNewCorrect] = useState<"a" | "b" | "c" | "d">("a");
+  // Create Bank Modal State
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  useEffect(() => {
-    fetch("/api/questions")
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.banks && data.banks.length > 0) {
-          const b = data.banks[0];
-          setBankTitle(b.title);
-          if (b.questions && b.questions.length > 0) {
-            setQuestionsList(b.questions);
-          }
-        }
-      })
-      .catch((err) => console.error(err));
-  }, []);
+  // Edit Bank Modal State
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingBank, setEditingBank] = useState<BankItem | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDescription, setEditDescription] = useState("");
 
-  const filteredQuestions = questionsList.filter(
-    (q) =>
-      q.text.toLowerCase().includes(search.toLowerCase()) ||
-      q.optionA.toLowerCase().includes(search.toLowerCase()) ||
-      q.optionB.toLowerCase().includes(search.toLowerCase()) ||
-      q.optionC.toLowerCase().includes(search.toLowerCase())
-  );
+  // Delete Bank Modal State
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingBank, setDeletingBank] = useState<BankItem | null>(null);
 
-  const handleAddQuestion = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newText || !newOptA || !newOptB || !newOptC) return;
-    sound.playClick();
-
-    const newQ = {
-      orderIndex: questionsList.length + 1,
-      text: newText,
-      optionA: newOptA,
-      optionB: newOptB,
-      optionC: newOptC,
-      optionD: newOptD || undefined,
-      correctAnswer: newCorrect,
-    };
-
-    setQuestionsList([...questionsList, newQ]);
-
-    fetch("/api/questions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newQ),
-    }).catch(console.error);
-
-    setNewText("");
-    setNewOptA("");
-    setNewOptB("");
-    setNewOptC("");
-    setNewOptD("");
-    setNewCorrect("a");
-    setShowAddModal(false);
+  const fetchBanks = async () => {
+    try {
+      setLoading(true);
+      const res = await fetch("/api/banks");
+      const data = await res.json();
+      if (data.banks) {
+        setBanks(data.banks);
+      }
+    } catch (err) {
+      console.error("Gagal memuat daftar bank soal:", err);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleDelete = (index: number) => {
+  useEffect(() => {
+    fetchBanks();
+  }, []);
+
+  const totalQuestions = banks.reduce((sum, b) => sum + (b.questionsCount || 0), 0);
+
+  const filteredBanks = banks.filter(
+    (b) =>
+      b.title.toLowerCase().includes(search.toLowerCase()) ||
+      (b.description && b.description.toLowerCase().includes(search.toLowerCase()))
+  );
+
+  const handleCreateBank = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTitle.trim()) return;
+
     sound.playClick();
-    const updated = questionsList.filter((_, i) => i !== index);
-    setQuestionsList(updated);
+    setIsSubmitting(true);
+
+    try {
+      const res = await fetch("/api/banks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: newTitle.trim(),
+          description: newDescription.trim() || undefined,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.bank) {
+        sound.playJoinPop();
+        setShowCreateModal(false);
+        setNewTitle("");
+        setNewDescription("");
+        // Refresh and navigate to newly created bank to start adding questions!
+        router.push(`/admin/questions/${data.bank.id}`);
+      } else {
+        alert(data.error || "Gagal membuat modul bank soal");
+      }
+    } catch (err) {
+      console.error("Error creating bank:", err);
+      alert("Terjadi kesalahan saat membuat bank soal");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleOpenEdit = (bank: BankItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    sound.playClick();
+    setEditingBank(bank);
+    setEditTitle(bank.title);
+    setEditDescription(bank.description || "");
+    setShowEditModal(true);
+  };
+
+  const handleUpdateBank = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingBank || !editTitle.trim()) return;
+
+    sound.playClick();
+    setIsSubmitting(true);
+
+    try {
+      const res = await fetch(`/api/banks/${editingBank.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editTitle.trim(),
+          description: editDescription.trim() || null,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success && data.bank) {
+        setBanks((prev) =>
+          prev.map((b) => (b.id === editingBank.id ? { ...b, ...data.bank } : b))
+        );
+        setShowEditModal(false);
+        setEditingBank(null);
+      } else {
+        alert(data.error || "Gagal memperbarui info bank soal");
+      }
+    } catch (err) {
+      console.error("Error updating bank:", err);
+      alert("Terjadi kesalahan saat memperbarui bank soal");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const handleOpenDelete = (bank: BankItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    sound.playClick();
+    setDeletingBank(bank);
+    setShowDeleteModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletingBank) return;
+
+    sound.playClick();
+    setIsSubmitting(true);
+
+    try {
+      const res = await fetch(`/api/banks/${deletingBank.id}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setBanks((prev) => prev.filter((b) => b.id !== deletingBank.id));
+        setShowDeleteModal(false);
+        setDeletingBank(null);
+      } else {
+        alert(data.error || "Gagal menghapus bank soal");
+      }
+    } catch (err) {
+      console.error("Error deleting bank:", err);
+      alert("Terjadi kesalahan saat menghapus bank soal");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-black text-[#0F172A] font-heading">{bankTitle}</h2>
-          <p className="text-xs text-slate-500 font-bold mt-1">Total {questionsList.length} soal kuis terdaftar</p>
+    <div className="space-y-8 select-none">
+      {/* Hero Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 sm:p-8 rounded-[36px] border-2 border-slate-300 shadow-xl">
+        <div className="space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-xl bg-orange-100 border border-orange-200 text-[#FF5B00] text-xs font-black font-heading">
+            <Layers className="w-3.5 h-3.5" />
+            <span>Manajemen Modul & Bank Soal</span>
+          </div>
+          <h2 className="text-3xl sm:text-4xl font-black text-[#0F172A] font-heading tracking-tight">
+            Modul Bank Soal
+          </h2>
+          <p className="text-xs sm:text-sm text-slate-600 font-bold max-w-2xl">
+            Buat modul bank soal terlebih dahulu sesuai tema/materi pembelajaran, lalu kelola daftar pertanyaan di dalamnya untuk kuis interaktif.
+          </p>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 shrink-0">
           <button
             onClick={() => {
               sound.playClick();
-              setShowAddModal(true);
+              setShowCreateModal(true);
             }}
-            className="btn-arcade-orange btn-3d px-5 py-3 rounded-2xl text-white text-xs font-black font-heading flex items-center gap-2 cursor-pointer"
+            className="btn-arcade-orange btn-3d px-6 py-3.5 rounded-2xl text-white text-xs sm:text-sm font-black font-heading flex items-center gap-2.5 cursor-pointer shadow-lg"
           >
-            <Plus className="w-4 h-4 stroke-[3]" />
-            <span>Tambah Pertanyaan</span>
+            <Plus className="w-5 h-5 stroke-[3]" />
+            <span>Buat Bank Soal Baru</span>
           </button>
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className="relative">
-        <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <input
-          type="text"
-          placeholder="Cari pertanyaan atau opsi jawaban..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full pl-12 pr-5 py-3.5 bg-white border-2 border-slate-300 rounded-2xl text-xs text-[#0F172A] placeholder:text-slate-400 focus:outline-none focus:border-[#FF5B00] transition-colors shadow-sm font-bold"
-        />
-      </div>
-
-      {/* Questions Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {filteredQuestions.map((q, idx) => (
-          <div
-            key={idx}
-            className="bg-white p-5 sm:p-6 rounded-[32px] border-2 border-slate-300 hover:border-slate-400 transition-all space-y-3.5 shadow-sm"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <span className="px-3 py-1 rounded-xl bg-orange-100 text-[#FF5B00] font-heading text-xs font-black shrink-0 border border-orange-200">
-                #{idx + 1}
-              </span>
-              <p className="flex-1 text-sm font-black text-[#0F172A] font-heading leading-snug">{q.text}</p>
-              <button
-                onClick={() => handleDelete(idx)}
-                className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer shrink-0"
-                title="Hapus soal"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Options grid */}
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div
-                className={`p-3 rounded-2xl border-2 flex items-center justify-between ${
-                  q.correctAnswer === "a"
-                    ? "bg-emerald-100 border-emerald-400 text-emerald-950 font-black"
-                    : "bg-slate-50 border-slate-200 text-slate-700 font-bold"
-                }`}
-              >
-                <span className="truncate">A. {q.optionA}</span>
-                {q.correctAnswer === "a" && <CheckCircle2 className="w-4 h-4 text-emerald-700 stroke-[3] shrink-0 ml-1" />}
-              </div>
-
-              <div
-                className={`p-3 rounded-2xl border-2 flex items-center justify-between ${
-                  q.correctAnswer === "b"
-                    ? "bg-emerald-100 border-emerald-400 text-emerald-950 font-black"
-                    : "bg-slate-50 border-slate-200 text-slate-700 font-bold"
-                }`}
-              >
-                <span className="truncate">B. {q.optionB}</span>
-                {q.correctAnswer === "b" && <CheckCircle2 className="w-4 h-4 text-emerald-700 stroke-[3] shrink-0 ml-1" />}
-              </div>
-
-              <div
-                className={`p-3 rounded-2xl border-2 flex items-center justify-between ${
-                  q.correctAnswer === "c"
-                    ? "bg-emerald-100 border-emerald-400 text-emerald-950 font-black"
-                    : "bg-slate-50 border-slate-200 text-slate-700 font-bold"
-                }`}
-              >
-                <span className="truncate">C. {q.optionC}</span>
-                {q.correctAnswer === "c" && <CheckCircle2 className="w-4 h-4 text-emerald-700 stroke-[3] shrink-0 ml-1" />}
-              </div>
-
-              {q.optionD && (
-                <div
-                  className={`p-3 rounded-2xl border-2 flex items-center justify-between ${
-                    q.correctAnswer === "d"
-                      ? "bg-emerald-100 border-emerald-400 text-emerald-950 font-black"
-                      : "bg-slate-50 border-slate-200 text-slate-700 font-bold"
-                  }`}
-                >
-                  <span className="truncate">D. {q.optionD}</span>
-                  {q.correctAnswer === "d" && <CheckCircle2 className="w-4 h-4 text-emerald-700 stroke-[3] shrink-0 ml-1" />}
-                </div>
-              )}
-            </div>
+      {/* Stats Summary & Search Bar */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card className="bg-white p-5 rounded-3xl border-2 border-slate-300 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-orange-100 text-[#FF5B00] flex items-center justify-center font-heading">
+            <BookOpen className="w-6 h-6" />
           </div>
-        ))}
+          <div>
+            <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider font-heading">
+              Total Modul Bank
+            </p>
+            <p className="text-2xl font-black text-[#0F172A] font-heading mt-0.5">
+              {banks.length} Modul
+            </p>
+          </div>
+        </Card>
+
+        <Card className="bg-white p-5 rounded-3xl border-2 border-slate-300 shadow-sm flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-blue-100 text-[#2563EB] flex items-center justify-center font-heading">
+            <HelpCircle className="w-6 h-6" />
+          </div>
+          <div>
+            <p className="text-[11px] font-black text-slate-500 uppercase tracking-wider font-heading">
+              Total Pertanyaan
+            </p>
+            <p className="text-2xl font-black text-[#0F172A] font-heading mt-0.5">
+              {totalQuestions} Soal
+            </p>
+          </div>
+        </Card>
+
+        <div className="relative flex items-center">
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            type="text"
+            placeholder="Cari nama bank soal atau deskripsi..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full h-full min-h-[58px] pl-12 pr-5 py-3.5 bg-white border-2 border-slate-300 rounded-3xl text-xs text-[#0F172A] placeholder:text-slate-400 focus:outline-none focus:border-[#FF5B00] transition-colors shadow-sm font-bold"
+          />
+        </div>
       </div>
 
-      {/* Add Question Modal */}
-      {showAddModal && (
+      {/* Question Banks Grid */}
+      {loading ? (
+        <div className="text-center py-16 bg-white rounded-[36px] border-2 border-slate-300">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-[#FF5B00] border-t-transparent mb-3"></div>
+          <p className="text-sm font-black text-slate-600 font-heading">Memuat daftar bank soal...</p>
+        </div>
+      ) : filteredBanks.length === 0 ? (
+        <div className="text-center py-16 px-6 bg-white rounded-[36px] border-2 border-slate-300 shadow-sm space-y-4">
+          <div className="w-16 h-16 rounded-3xl bg-orange-100 text-[#FF5B00] mx-auto flex items-center justify-center">
+            <BookOpen className="w-8 h-8" />
+          </div>
+          <div className="space-y-1">
+            <h3 className="text-lg font-black text-[#0F172A] font-heading">
+              {search ? "Bank Soal Tidak Ditemukan" : "Belum Ada Modul Bank Soal"}
+            </h3>
+            <p className="text-xs text-slate-500 font-bold max-w-md mx-auto">
+              {search
+                ? `Tidak ada bank soal yang cocok dengan kata kunci "${search}".`
+                : "Mulai dengan membuat modul bank soal baru untuk menyusun kumpulan soal kuis Anda."}
+            </p>
+          </div>
+          {!search && (
+            <button
+              onClick={() => {
+                sound.playClick();
+                setShowCreateModal(true);
+              }}
+              className="btn-arcade-orange btn-3d px-6 py-3 rounded-2xl text-white text-xs font-black font-heading inline-flex items-center gap-2 cursor-pointer mt-2"
+            >
+              <Plus className="w-4 h-4 stroke-[3]" />
+              <span>Buat Bank Soal Sekarang</span>
+            </button>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          {filteredBanks.map((bank) => (
+            <div
+              key={bank.id}
+              className="group bg-white rounded-[32px] border-2 border-slate-300 hover:border-orange-300 transition-all p-6 sm:p-7 shadow-md flex flex-col justify-between space-y-5"
+            >
+              <div className="space-y-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2.5">
+                    <span className="p-2.5 rounded-2xl bg-orange-100 text-[#FF5B00] border border-orange-200">
+                      <BookOpen className="w-5 h-5" />
+                    </span>
+                    <Badge variant="glow" className="text-xs font-black">
+                      {bank.questionsCount || 0} Pertanyaan
+                    </Badge>
+                  </div>
+
+                  {/* Actions Top Right */}
+                  <div className="flex items-center gap-1">
+                    <button
+                      onClick={(e) => handleOpenEdit(bank, e)}
+                      className="p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+                      title="Edit Judul/Deskripsi Modul"
+                    >
+                      <Pencil className="w-4 h-4" />
+                    </button>
+                    <button
+                      onClick={(e) => handleOpenDelete(bank, e)}
+                      className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                      title="Hapus Modul Bank Soal"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+
+                <div>
+                  <h3 className="text-lg sm:text-xl font-black text-[#0F172A] font-heading group-hover:text-[#FF5B00] transition-colors">
+                    {bank.title}
+                  </h3>
+                  <p className="text-xs text-slate-600 mt-1.5 line-clamp-2 leading-relaxed font-bold">
+                    {bank.description || "Belum ada deskripsi untuk modul ini."}
+                  </p>
+                </div>
+              </div>
+
+              {/* Bottom Actions */}
+              <div className="pt-4 border-t-2 border-slate-100 flex flex-wrap items-center gap-2.5">
+                <Button
+                  asChild
+                  variant="arcadeOrange"
+                  size="default"
+                  className="flex-1 py-2.5 cursor-pointer"
+                >
+                  <Link
+                    href={`/admin/questions/${bank.id}`}
+                    onClick={() => sound.playClick()}
+                    className="flex items-center justify-center gap-2"
+                  >
+                    <FolderOpen className="w-4 h-4" />
+                    <span className="text-xs font-black font-heading uppercase">Kelola Soal ({bank.questionsCount || 0})</span>
+                    <ArrowRight className="w-3.5 h-3.5 ml-0.5 stroke-[3]" />
+                  </Link>
+                </Button>
+
+                <Button
+                  asChild
+                  variant="arcadeWhite"
+                  size="default"
+                  className="py-2.5 cursor-pointer"
+                >
+                  <Link
+                    href={`/admin/games/new?bankId=${bank.id}`}
+                    onClick={() => sound.playClick()}
+                    className="flex items-center justify-center gap-1.5 text-xs font-black font-heading"
+                    title="Buat sesi kuis langsung dari bank soal ini"
+                  >
+                    <Play className="w-3.5 h-3.5 fill-current text-[#FF5B00]" />
+                    <span>Mainkan</span>
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Modal: Buat Bank Soal Baru */}
+      {showCreateModal && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="w-full max-w-lg bg-white border-2 border-slate-300 rounded-[36px] p-7 shadow-2xl space-y-4 animate-pop-in">
+          <div className="w-full max-w-lg bg-white border-2 border-slate-300 rounded-[36px] p-7 shadow-2xl space-y-5 animate-pop-in">
             <div className="flex items-center justify-between">
-              <h3 className="text-xl font-black text-[#0F172A] font-heading">Tambah Pertanyaan Baru</h3>
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-orange-100 text-[#FF5B00]">
+                  <BookOpen className="w-5 h-5" />
+                </div>
+                <h3 className="text-xl font-black text-[#0F172A] font-heading">
+                  Buat Modul Bank Soal Baru
+                </h3>
+              </div>
               <button
-                onClick={() => setShowAddModal(false)}
-                className="p-1 rounded-full text-slate-400 hover:text-slate-700 cursor-pointer"
+                onClick={() => setShowCreateModal(false)}
+                className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 cursor-pointer"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleAddQuestion} className="space-y-3.5 text-xs">
+            <p className="text-xs text-slate-500 font-bold">
+              Tentukan judul dan topik modul. Setelah dibuat, Anda dapat langsung menambahkan pertanyaan ke modul ini.
+            </p>
+
+            <form onSubmit={handleCreateBank} className="space-y-4 text-xs">
               <div>
                 <label className="block text-slate-700 font-black font-heading mb-1.5">
-                  Teks Pertanyaan
+                  Judul Modul Bank Soal <span className="text-rose-500">*</span>
                 </label>
-                <textarea
-                  rows={2}
+                <input
+                  type="text"
                   required
-                  placeholder="Contoh: Berapa jumlah pemain bola basket dalam satu tim?"
-                  value={newText}
-                  onChange={(e) => setNewText(e.target.value)}
-                  className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-2xl text-[#0F172A] focus:outline-none focus:border-[#FF5B00] font-bold"
+                  autoFocus
+                  placeholder="Contoh: Kuis PJOK - Bola Basket Kelas 3 SD"
+                  value={newTitle}
+                  onChange={(e) => setNewTitle(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-2xl text-xs text-[#0F172A] font-bold focus:outline-none focus:border-[#FF5B00]"
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-slate-700 font-black font-heading mb-1">Opsi A</label>
-                  <input
-                    type="text"
-                    required
-                    value={newOptA}
-                    onChange={(e) => setNewOptA(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-2xl text-[#0F172A] focus:outline-none focus:border-[#FF5B00] font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-700 font-black font-heading mb-1">Opsi B</label>
-                  <input
-                    type="text"
-                    required
-                    value={newOptB}
-                    onChange={(e) => setNewOptB(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-2xl text-[#0F172A] focus:outline-none focus:border-[#FF5B00] font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-700 font-black font-heading mb-1">Opsi C</label>
-                  <input
-                    type="text"
-                    required
-                    value={newOptC}
-                    onChange={(e) => setNewOptC(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-2xl text-[#0F172A] focus:outline-none focus:border-[#FF5B00] font-bold"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-500 font-heading mb-1">Opsi D (Opsional)</label>
-                  <input
-                    type="text"
-                    value={newOptD}
-                    onChange={(e) => setNewOptD(e.target.value)}
-                    className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-2xl text-[#0F172A] focus:outline-none focus:border-[#FF5B00] font-bold"
-                  />
-                </div>
-              </div>
-
               <div>
-                <label className="block text-slate-700 font-black font-heading mb-1">
-                  Kunci Jawaban Benar
+                <label className="block text-slate-700 font-black font-heading mb-1.5">
+                  Deskripsi / Catatan Materi (Opsional)
                 </label>
-                <p className="text-[11px] text-slate-500 font-bold mb-2">
-                  Pilih 1 opsi yang menjadi kunci jawaban benar untuk dinilai secara otomatis saat kuis.
-                </p>
-                <div className="grid grid-cols-4 gap-2">
-                  {(["a", "b", "c", "d"] as const).map((key) => (
-                    <button
-                      key={key}
-                      type="button"
-                      onClick={() => {
-                        sound.playClick();
-                        setNewCorrect(key);
-                      }}
-                      className={`btn-3d py-2.5 rounded-2xl border-2 font-black uppercase font-heading transition-all cursor-pointer ${
-                        newCorrect === key
-                          ? "bg-[#FF5B00] border-[#C2410C] text-white shadow-md"
-                          : "bg-slate-50 border-slate-200 text-slate-700 hover:bg-slate-100"
-                      }`}
-                    >
-                      Opsi {key}
-                    </button>
-                  ))}
-                </div>
+                <textarea
+                  rows={3}
+                  placeholder="Contoh: Pembahasan gerakan dasar dribble, passing, shooting, dan peraturan pertandingan..."
+                  value={newDescription}
+                  onChange={(e) => setNewDescription(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-2xl text-xs text-[#0F172A] font-bold focus:outline-none focus:border-[#FF5B00]"
+                />
               </div>
 
-              <div className="flex items-center justify-end gap-3 pt-4 border-t-2 border-slate-100">
+              <div className="flex items-center justify-end gap-3 pt-3 border-t-2 border-slate-100">
                 <button
                   type="button"
-                  onClick={() => setShowAddModal(false)}
+                  onClick={() => setShowCreateModal(false)}
                   className="btn-arcade-white btn-3d px-5 py-2.5 rounded-xl text-slate-800 font-bold font-heading cursor-pointer"
                 >
                   Batal
                 </button>
                 <button
                   type="submit"
-                  className="btn-arcade-orange btn-3d px-6 py-2.5 rounded-xl text-white font-black font-heading cursor-pointer"
+                  disabled={isSubmitting || !newTitle.trim()}
+                  className="btn-arcade-orange btn-3d px-6 py-2.5 rounded-xl text-white font-black font-heading cursor-pointer disabled:opacity-50 flex items-center gap-2"
                 >
-                  Simpan Soal
+                  <span>{isSubmitting ? "Menyimpan..." : "Simpan & Buat Soal"}</span>
+                  <ArrowRight className="w-4 h-4 stroke-[3]" />
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Bank Soal */}
+      {showEditModal && editingBank && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-lg bg-white border-2 border-slate-300 rounded-[36px] p-7 shadow-2xl space-y-5 animate-pop-in">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-orange-100 text-[#FF5B00]">
+                  <Pencil className="w-5 h-5" />
+                </div>
+                <h3 className="text-xl font-black text-[#0F172A] font-heading">
+                  Edit Info Modul Bank Soal
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="p-1.5 rounded-full text-slate-400 hover:text-slate-700 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUpdateBank} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-700 font-black font-heading mb-1.5">
+                  Judul Modul Bank Soal <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-4 py-3 bg-slate-50 border-2 border-slate-300 rounded-2xl text-xs text-[#0F172A] font-bold focus:outline-none focus:border-[#FF5B00]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-slate-700 font-black font-heading mb-1.5">
+                  Deskripsi / Catatan Materi
+                </label>
+                <textarea
+                  rows={3}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  className="w-full px-4 py-2.5 bg-slate-50 border-2 border-slate-300 rounded-2xl text-xs text-[#0F172A] font-bold focus:outline-none focus:border-[#FF5B00]"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-3 pt-3 border-t-2 border-slate-100">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="btn-arcade-white btn-3d px-5 py-2.5 rounded-xl text-slate-800 font-bold font-heading cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !editTitle.trim()}
+                  className="btn-arcade-orange btn-3d px-6 py-2.5 rounded-xl text-white font-black font-heading cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmitting ? "Menyimpan..." : "Perbarui Info"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Konfirmasi Hapus Bank Soal */}
+      {showDeleteModal && deletingBank && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white border-2 border-rose-300 rounded-[36px] p-7 shadow-2xl space-y-4 animate-pop-in">
+            <div className="w-12 h-12 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+
+            <div className="text-center space-y-1.5">
+              <h3 className="text-lg font-black text-[#0F172A] font-heading">
+                Hapus Modul Bank Soal?
+              </h3>
+              <p className="text-xs text-slate-600 font-bold">
+                Apakah Anda yakin ingin menghapus bank soal{" "}
+                <span className="text-[#0F172A] font-black">"{deletingBank.title}"</span>?
+              </p>
+              <p className="text-[11px] text-rose-600 font-bold bg-rose-50 p-2.5 rounded-xl border border-rose-200">
+                Seluruh {deletingBank.questionsCount || 0} pertanyaan di dalam modul ini akan ikut terhapus secara permanen.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="btn-arcade-white btn-3d px-5 py-2.5 rounded-xl text-slate-800 font-bold font-heading cursor-pointer flex-1"
+              >
+                Batal
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isSubmitting}
+                className="btn-3d px-5 py-2.5 rounded-xl bg-rose-600 border-2 border-rose-700 text-white font-black font-heading cursor-pointer hover:bg-rose-700 flex-1 shadow-md"
+              >
+                {isSubmitting ? "Menghapus..." : "Ya, Hapus Modul"}
+              </button>
+            </div>
           </div>
         </div>
       )}
