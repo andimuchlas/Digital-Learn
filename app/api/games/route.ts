@@ -10,13 +10,40 @@ export async function GET() {
       .select()
       .from(gameSessions)
       .orderBy(desc(gameSessions.createdAt))
-      .limit(10);
+      .limit(20);
     const results = await db.select().from(playerResults);
 
-    const history = sessions.map((s) => ({
-      ...s,
-      players: results.filter((r) => r.gameSessionId === s.id),
-    }));
+    const history = sessions.map((s) => {
+      const room = gameManager.getRoom(s.code);
+      const sessionPlayers = results.filter((r) => r.gameSessionId === s.id);
+
+      // Determine accurate status
+      let effectiveStatus = s.status;
+      if (room?.status === "FINISHED" || s.status === "FINISHED") {
+        effectiveStatus = "FINISHED";
+      } else if (room?.status) {
+        effectiveStatus = room.status;
+      }
+
+      const playersList =
+        sessionPlayers.length > 0
+          ? sessionPlayers
+          : room
+          ? Object.values(room.players).map((p) => ({
+              id: p.id,
+              playerName: p.name,
+              playerClass: p.playerClass,
+              finalTile: p.tile,
+              correctAnswers: p.correctAnswers,
+            }))
+          : [];
+
+      return {
+        ...s,
+        status: effectiveStatus,
+        players: playersList,
+      };
+    });
 
     return NextResponse.json({ history });
   } catch (error) {

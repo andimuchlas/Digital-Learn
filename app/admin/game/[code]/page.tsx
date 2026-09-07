@@ -335,14 +335,19 @@ export default function AdminLiveGamePage({ params }: { params: Promise<{ code: 
         </Card>
       )}
 
-      {/* QUESTION MONITOR CARD (RUNNING / PAUSED) */}
+      {/* LIVE GAME STATUS MONITOR (RUNNING / PAUSED) */}
       {(gameState === "RUNNING" || gameState === "PAUSED") && currentQuestion && (
-        <Card className="p-5 sm:p-7 rounded-[36px] bg-white border-[3px] border-slate-300 shadow-xl space-y-4 animate-pop-in">
+        <Card className="p-4 sm:p-6 rounded-[32px] bg-white border-2 border-slate-300 shadow-xl space-y-3.5 animate-pop-in">
           {/* Top Bar: Question badge & Answered Counter */}
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <Badge variant="secondary" className="text-xs uppercase tracking-wider font-heading py-1 px-3">
-              Soal #{currentQuestion.questionNumber} dari {currentQuestion.totalQuestions}
-            </Badge>
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="text-xs uppercase tracking-wider font-heading py-1 px-3">
+                Soal #{currentQuestion.questionNumber} dari {currentQuestion.totalQuestions}
+              </Badge>
+              <span className="text-xs text-slate-500 font-bold hidden sm:inline">
+                Murid sedang menjawab di perangkat masing-masing
+              </span>
+            </div>
 
             <div className="flex items-center gap-3">
               <span className="text-xs text-slate-700 font-heading font-bold flex items-center gap-1.5 bg-orange-50 px-3 py-1.5 rounded-2xl border border-orange-200">
@@ -367,54 +372,6 @@ export default function AdminLiveGamePage({ params }: { params: Promise<{ code: 
             isPaused={isPaused}
             enableSound={soundEnabled}
           />
-
-          {/* Question Text */}
-          <div className="py-2 text-center">
-            <h3 className="text-xl sm:text-2xl md:text-3xl font-black text-[#0F172A] font-heading leading-snug">
-              {currentQuestion.text}
-            </h3>
-          </div>
-
-          {/* Question Options Monitor Pills (For Classroom Reference) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2.5 pt-1">
-            <div className="p-3 rounded-2xl bg-rose-50 border-2 border-rose-200 flex items-center gap-2.5">
-              <span className="w-7 h-7 rounded-xl bg-rose-500 text-white flex items-center justify-center text-xs font-black shrink-0 font-heading">
-                ▲
-              </span>
-              <span className="text-xs sm:text-sm font-bold text-slate-800 truncate">
-                {currentQuestion.optionA}
-              </span>
-            </div>
-
-            <div className="p-3 rounded-2xl bg-blue-50 border-2 border-blue-200 flex items-center gap-2.5">
-              <span className="w-7 h-7 rounded-xl bg-blue-500 text-white flex items-center justify-center text-xs font-black shrink-0 font-heading">
-                ◆
-              </span>
-              <span className="text-xs sm:text-sm font-bold text-slate-800 truncate">
-                {currentQuestion.optionB}
-              </span>
-            </div>
-
-            <div className="p-3 rounded-2xl bg-amber-50 border-2 border-amber-200 flex items-center gap-2.5">
-              <span className="w-7 h-7 rounded-xl bg-amber-500 text-white flex items-center justify-center text-xs font-black shrink-0 font-heading">
-                ●
-              </span>
-              <span className="text-xs sm:text-sm font-bold text-slate-800 truncate">
-                {currentQuestion.optionC}
-              </span>
-            </div>
-
-            {currentQuestion.optionD && (
-              <div className="p-3 rounded-2xl bg-emerald-50 border-2 border-emerald-200 flex items-center gap-2.5">
-                <span className="w-7 h-7 rounded-xl bg-emerald-500 text-white flex items-center justify-center text-xs font-black shrink-0 font-heading">
-                  ■
-                </span>
-                <span className="text-xs sm:text-sm font-bold text-slate-800 truncate">
-                  {currentQuestion.optionD}
-                </span>
-              </div>
-            )}
-          </div>
         </Card>
       )}
 

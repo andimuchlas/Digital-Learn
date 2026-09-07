@@ -1,6 +1,7 @@
 import { RawQuestion, DEFAULT_BASKETBALL_BANK } from "./default-questions";
 import { Server as SocketIOServer } from "socket.io";
 import { db, gameSessions, playerResults } from "../db";
+import { eq } from "drizzle-orm";
 
 export interface Player {
   id: string;
@@ -205,6 +206,14 @@ class GameManager {
     room.status = "EXPLANATION";
     room.currentQuestionIndex = 0;
     room.explanationRemainingSeconds = 5;
+
+    // Asynchronously update DB status to RUNNING
+    db.update(gameSessions)
+      .set({ status: "RUNNING" })
+      .where(eq(gameSessions.code, room.code))
+      .catch((err) => {
+        console.warn("DB update gameSessions status notice:", err);
+      });
 
     // Reset all player scores & positions
     for (const player of Object.values(room.players)) {
@@ -512,21 +521,47 @@ class GameManager {
       finalLeaderboard,
     });
 
-    // Asynchronously save to Supabase Database via Drizzle if connected
+    // Asynchronously save to Database via Drizzle if connected
     try {
-      const [session] = await db
-        .insert(gameSessions)
-        .values({
-          code: room.code,
-          title: room.title,
-          status: "FINISHED",
-          questionTime: room.questionTime,
-          totalQuestions: room.totalQuestions,
-          finishedAt: new Date(),
-        })
-        .returning();
+      const existing = await db
+        .select()
+        .from(gameSessions)
+        .where(eq(gameSessions.code, room.code))
+        .limit(1);
+
+      let session;
+      if (existing && existing.length > 0) {
+        const [updated] = await db
+          .update(gameSessions)
+          .set({
+            status: "FINISHED",
+            finishedAt: new Date(),
+          })
+          .where(eq(gameSessions.id, existing[0].id))
+          .returning();
+        session = updated;
+      } else {
+        const [inserted] = await db
+          .insert(gameSessions)
+          .values({
+            code: room.code,
+            title: room.title,
+            status: "FINISHED",
+            questionTime: room.questionTime,
+            totalQuestions: room.totalQuestions,
+            finishedAt: new Date(),
+          })
+          .returning();
+        session = inserted;
+      }
 
       if (session) {
+        // Delete previous results if any to avoid duplicates
+        await db
+          .delete(playerResults)
+          .where(eq(playerResults.gameSessionId, session.id))
+          .catch(() => {});
+
         const results = finalLeaderboard.map((r) => ({
           gameSessionId: session.id,
           playerName: r.name,
@@ -540,10 +575,10 @@ class GameManager {
         if (results.length > 0) {
           await db.insert(playerResults).values(results);
         }
-        console.log(`💾 Saved game results for lobby ${room.code} to Supabase`);
+        console.log(`💾 Saved game results for lobby ${room.code} (${results.length} players) to DB`);
       }
     } catch (e) {
-      console.warn("⚠️ Could not persist game to Supabase DB (running in-memory):", e);
+      console.warn("⚠️ Could not persist game to DB (running in-memory):", e);
     }
   }
 
