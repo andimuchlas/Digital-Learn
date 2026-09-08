@@ -29,6 +29,17 @@ export default function AdminGameResultPage({ params }: { params: Promise<{ code
           if (data.session?.title) setGameTitle(data.session.title);
           if (data.session?.totalQuestions) setTotalQuestions(data.session.totalQuestions);
           else if (data.questions?.length) setTotalQuestions(data.questions.length);
+
+          if (data.players && data.players.length > 0) {
+            const sorted = [...data.players]
+              .sort(compareLeaderboardPlayers)
+              .map((p: any, idx: number) => ({
+                ...p,
+                rank: p.rank || idx + 1,
+                finalTile: p.finalTile || p.tile || 1,
+              }));
+            setLeaderboard(sorted);
+          }
         }
       })
       .catch(() => {});
@@ -43,26 +54,31 @@ export default function AdminGameResultPage({ params }: { params: Promise<{ code
     });
 
     if (socket) {
-      socket.emit("room:get_state", { code }, (res: any) => {
-        if (res.room) {
-          setGameTitle(res.room.title || gameTitle);
-          if (res.room.totalQuestions) setTotalQuestions(res.room.totalQuestions);
-          if (res.room.players) {
-            const sorted = Object.values(res.room.players)
-              .sort(compareLeaderboardPlayers)
-              .map((p: any, idx: number) => ({
-                ...p,
-                rank: idx + 1,
-                finalTile: p.tile || p.finalTile || 1,
-              }));
-            setLeaderboard(sorted);
+      const fetchState = () => {
+        socket.emit("room:get_state", { code }, (res: any) => {
+          if (res?.room) {
+            setGameTitle(res.room.title || gameTitle);
+            if (res.room.totalQuestions) setTotalQuestions(res.room.totalQuestions);
+            if (res.room.players && res.room.players.length > 0) {
+              const sorted = Object.values(res.room.players)
+                .sort(compareLeaderboardPlayers)
+                .map((p: any, idx: number) => ({
+                  ...p,
+                  rank: idx + 1,
+                  finalTile: p.tile || p.finalTile || 1,
+                }));
+              setLeaderboard(sorted);
+            }
           }
-        }
-      });
+        });
+      };
+
+      fetchState();
+      socket.on("connect", fetchState);
 
       const handleGameFinished = (data: any) => {
         if (data.totalQuestions) setTotalQuestions(data.totalQuestions);
-        if (data.finalLeaderboard) {
+        if (data.finalLeaderboard && data.finalLeaderboard.length > 0) {
           const sorted = [...data.finalLeaderboard]
             .sort(compareLeaderboardPlayers)
             .map((p: any, idx: number) => ({
@@ -76,6 +92,7 @@ export default function AdminGameResultPage({ params }: { params: Promise<{ code
 
       socket.on("game:finished", handleGameFinished);
       return () => {
+        socket.off("connect", fetchState);
         socket.off("game:finished", handleGameFinished);
       };
     }

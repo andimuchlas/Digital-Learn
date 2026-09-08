@@ -1,7 +1,7 @@
 import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
 import { gameManager, GameRoom } from "./lib/game-manager";
-import { db, gameSessions, questions } from "./db";
+import { db, gameSessions, questions, playerResults } from "./db";
 import { eq } from "drizzle-orm";
 import { DEFAULT_BASKETBALL_BANK } from "./lib/default-questions";
 import * as dotenv from "dotenv";
@@ -22,20 +22,8 @@ const httpServer = createServer((req, res) => {
     return;
   }
 
-  if (req.url === "/" || req.url === "/health") {
-    res.writeHead(200, { "Content-Type": "application/json" });
-    res.end(
-      JSON.stringify({
-        status: "ok",
-        service: "digital-learn-socket-server",
-        timestamp: new Date().toISOString(),
-      })
-    );
-    return;
-  }
-
-  res.writeHead(404, { "Content-Type": "text/plain" });
-  res.end("Not Found");
+  res.writeHead(200, { "Content-Type": "application/json" });
+  res.end(JSON.stringify({ status: "ok", service: "digital-learn-socket-server" }));
 });
 
 const io = new SocketIOServer(httpServer, {
@@ -60,7 +48,7 @@ async function ensureRoom(code: string): Promise<GameRoom | undefined> {
       .where(eq(gameSessions.code, upperCode))
       .limit(1);
 
-    if (session && session.status !== "FINISHED") {
+    if (session) {
       let qList: any[] = [];
       if (session.bankId) {
         const dbQuestions = await db
@@ -105,6 +93,31 @@ async function ensureRoom(code: string): Promise<GameRoom | undefined> {
         qList,
         session.questionTime || 20
       );
+
+      if (session.status === "FINISHED") {
+        room.status = "FINISHED";
+        const dbResults = await db
+          .select()
+          .from(playerResults)
+          .where(eq(playerResults.gameSessionId, session.id));
+
+        for (const pr of dbResults) {
+          room.players[pr.id] = {
+            id: pr.id,
+            name: pr.playerName,
+            playerClass: pr.playerClass || "",
+            socketId: "",
+            tile: pr.finalTile || 1,
+            correctAnswers: pr.correctAnswers || 0,
+            wrongAnswers: (pr.totalQuestions || 25) - (pr.correctAnswers || 0),
+            currentAnswer: null,
+            answeredAt: null,
+            totalResponseTime: 0,
+            isOnline: false,
+          };
+        }
+      }
+
       return room;
     }
   } catch (err) {

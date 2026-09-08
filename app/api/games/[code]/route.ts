@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { db, gameSessions, questions, questionBanks } from "@/db";
-import { eq, desc } from "drizzle-orm";
+import { db, gameSessions, questions, playerResults } from "@/db";
+import { eq } from "drizzle-orm";
 import { DEFAULT_BASKETBALL_BANK } from "@/lib/default-questions";
 
 export async function GET(
@@ -63,10 +63,29 @@ export async function GET(
       }
     }
 
+    const results = await db
+      .select()
+      .from(playerResults)
+      .where(eq(playerResults.gameSessionId, session.id))
+      .orderBy(playerResults.rank);
+
+    const players = results.map((r) => ({
+      id: r.id,
+      name: r.playerName,
+      playerName: r.playerName,
+      playerClass: r.playerClass,
+      finalTile: r.finalTile,
+      tile: r.finalTile,
+      correctAnswers: r.correctAnswers,
+      totalQuestions: r.totalQuestions,
+      rank: r.rank,
+    }));
+
     return NextResponse.json({
       success: true,
       session,
       questions: qList,
+      players,
     });
   } catch (error) {
     console.error("Error fetching game session:", error);
