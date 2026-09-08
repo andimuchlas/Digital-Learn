@@ -6,6 +6,7 @@ import { useSocket } from "@/hooks/useSocket";
 import { GameBoard, BoardPlayer } from "@/components/GameBoard";
 import { TimerBar } from "@/components/TimerBar";
 import { sound } from "@/lib/sound";
+import { compareLeaderboardPlayers } from "@/lib/leaderboard";
 import {
   Pause,
   Play,
@@ -227,7 +228,7 @@ export default function AdminLiveGamePage({ params }: { params: Promise<{ code: 
     router.push(`/admin/game/${code}/result`);
   };
 
-  const sortedLeaderboard = [...players].sort((a, b) => (b.tile || 1) - (a.tile || 1));
+  const sortedLeaderboard = [...players].sort(compareLeaderboardPlayers);
   const answeredPercentage = players.length > 0 ? (answeredCount / players.length) * 100 : 0;
 
   return (

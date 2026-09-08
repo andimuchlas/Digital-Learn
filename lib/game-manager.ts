@@ -2,6 +2,7 @@ import { RawQuestion, DEFAULT_BASKETBALL_BANK } from "./default-questions";
 import { Server as SocketIOServer } from "socket.io";
 import { db, gameSessions, playerResults } from "../db";
 import { eq } from "drizzle-orm";
+import { compareLeaderboardPlayers } from "./leaderboard";
 
 export interface Player {
   id: string;
@@ -14,6 +15,7 @@ export interface Player {
   wrongAnswers: number;
   currentAnswer: "a" | "b" | "c" | "d" | null;
   answeredAt: number | null;
+  totalResponseTime: number;
   isOnline: boolean;
 }
 
@@ -171,6 +173,7 @@ class GameManager {
       wrongAnswers: 0,
       currentAnswer: null,
       answeredAt: null,
+      totalResponseTime: 0,
       isOnline: true,
     };
 
@@ -222,6 +225,7 @@ class GameManager {
       player.wrongAnswers = 0;
       player.currentAnswer = null;
       player.answeredAt = null;
+      player.totalResponseTime = 0;
     }
 
     io.to(code).emit("game:explanation_started", {
@@ -335,6 +339,10 @@ class GameManager {
 
     player.currentAnswer = answer;
     player.answeredAt = Date.now();
+    const responseTime = room.currentQuestionStartedAt
+      ? Math.max(0, player.answeredAt - room.currentQuestionStartedAt)
+      : 0;
+    player.totalResponseTime = (player.totalResponseTime || 0) + responseTime;
 
     // Count how many online players have answered
     const onlinePlayers = Object.values(room.players).filter((p) => p.isOnline);
@@ -401,10 +409,7 @@ class GameManager {
 
     // Leaderboard ranking
     const leaderboard = Object.values(room.players)
-      .sort((a, b) => {
-        if (b.tile !== a.tile) return b.tile - a.tile;
-        return b.correctAnswers - a.correctAnswers;
-      })
+      .sort(compareLeaderboardPlayers)
       .map((p, index) => ({
         rank: index + 1,
         id: p.id,
@@ -412,7 +417,9 @@ class GameManager {
         playerClass: p.playerClass,
         avatar: p.avatar,
         tile: p.tile,
+        finalTile: p.tile,
         correctAnswers: p.correctAnswers,
+        totalResponseTime: p.totalResponseTime || 0,
       }));
 
     // Broadcast question evaluation & results
@@ -500,10 +507,7 @@ class GameManager {
     room.status = "FINISHED";
 
     const finalLeaderboard = Object.values(room.players)
-      .sort((a, b) => {
-        if (b.tile !== a.tile) return b.tile - a.tile;
-        return b.correctAnswers - a.correctAnswers;
-      })
+      .sort(compareLeaderboardPlayers)
       .map((p, index) => ({
         rank: index + 1,
         id: p.id,
@@ -511,7 +515,9 @@ class GameManager {
         playerClass: p.playerClass,
         avatar: p.avatar,
         finalTile: p.tile,
+        tile: p.tile,
         correctAnswers: p.correctAnswers,
+        totalResponseTime: p.totalResponseTime || 0,
         totalQuestions: room.totalQuestions,
       }));
 
@@ -662,6 +668,8 @@ class GameManager {
         tile: p.tile,
         correctAnswers: p.correctAnswers,
         wrongAnswers: p.wrongAnswers,
+        totalResponseTime: p.totalResponseTime || 0,
+        answeredAt: p.answeredAt,
         isOnline: p.isOnline,
       })),
     };

@@ -10,6 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getAvatarSrc } from "@/lib/avatars";
+import { compareLeaderboardPlayers } from "@/lib/leaderboard";
 
 export default function PlayerResultPage({ params }: { params: Promise<{ code: string }> }) {
   const unwrappedParams = use(params);
@@ -29,22 +30,29 @@ export default function PlayerResultPage({ params }: { params: Promise<{ code: s
   useEffect(() => {
     sound.playVictory();
     confetti({
-      particleCount: 160,
+      particleCount: 150,
       spread: 90,
-      origin: { y: 0.55 },
+      origin: { y: 0.6 },
     });
 
     const saved = localStorage.getItem(`quiz_player_${code}`);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setPlayerId(parsed.id);
-        setPlayerName(parsed.name);
-        setPlayerClass(parsed.playerClass);
+        if (parsed.id) setPlayerId(parsed.id);
+        if (parsed.name) setPlayerName(parsed.name);
+        if (parsed.playerClass) setPlayerClass(parsed.playerClass);
         if (parsed.avatar) setPlayerAvatar(parsed.avatar);
       } catch (e) {
         // ignore
       }
+    } else {
+      const storedId = sessionStorage.getItem(`quiz_player_id_${code}`);
+      const storedName = sessionStorage.getItem(`quiz_player_name_${code}`);
+      const storedAvatar = sessionStorage.getItem(`quiz_player_avatar_${code}`);
+      if (storedId) setPlayerId(storedId);
+      if (storedName) setPlayerName(storedName);
+      if (storedAvatar) setPlayerAvatar(storedAvatar);
     }
   }, [code]);
 
@@ -55,11 +63,12 @@ export default function PlayerResultPage({ params }: { params: Promise<{ code: s
       if (res.room) {
         setTotalQuestions(res.room.totalQuestions || 25);
         if (res.room.players) {
-          const sorted = Object.values(res.room.players)
-            .sort((a: any, b: any) => (b.tile || 1) - (a.tile || 1))
+          const sorted = (Object.values(res.room.players) as any[])
+            .sort(compareLeaderboardPlayers)
             .map((p: any, idx: number) => ({
               ...p,
               rank: idx + 1,
+              finalTile: p.tile || p.finalTile || 1,
             }));
           setLeaderboard(sorted);
 
@@ -67,7 +76,7 @@ export default function PlayerResultPage({ params }: { params: Promise<{ code: s
             const me = sorted.find((p) => p.id === playerId);
             if (me) {
               setMyRank(me.rank);
-              setMyTile(me.tile || 1);
+              setMyTile(me.finalTile || me.tile || 1);
               setMyCorrect(me.correctAnswers || 0);
               if (me.avatar) setPlayerAvatar(me.avatar);
             }
@@ -77,10 +86,18 @@ export default function PlayerResultPage({ params }: { params: Promise<{ code: s
     });
 
     const handleGameFinished = (data: any) => {
+      if (data.totalQuestions) setTotalQuestions(data.totalQuestions);
       if (data.finalLeaderboard) {
-        setLeaderboard(data.finalLeaderboard);
+        const sorted = [...data.finalLeaderboard]
+          .sort(compareLeaderboardPlayers)
+          .map((p: any, idx: number) => ({
+            ...p,
+            rank: idx + 1,
+            finalTile: p.finalTile || p.tile || 1,
+          }));
+        setLeaderboard(sorted);
         if (playerId) {
-          const me = data.finalLeaderboard.find((p: any) => p.id === playerId);
+          const me = sorted.find((p: any) => p.id === playerId);
           if (me) {
             setMyRank(me.rank);
             setMyTile(me.finalTile || me.tile || 1);

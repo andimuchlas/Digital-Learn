@@ -23,6 +23,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { sound } from "@/lib/sound";
+import { compareLeaderboardPlayers } from "@/lib/leaderboard";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -597,8 +598,8 @@ export default function AdminDashboardPage() {
                     <tbody className="divide-y divide-slate-100">
                       {selectedHistory.players
                         .sort((a: any, b: any) => {
-                          if (a.rank && b.rank) return a.rank - b.rank;
-                          return (b.finalTile || 1) - (a.finalTile || 1);
+                          if (a.rank && b.rank && a.rank !== b.rank) return a.rank - b.rank;
+                          return compareLeaderboardPlayers(a, b);
                         })
                         .map((p: any, idx: number) => (
                           <tr key={idx} className="hover:bg-slate-50 transition-colors">

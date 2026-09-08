@@ -10,6 +10,7 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getAvatarSrc } from "@/lib/avatars";
+import { compareLeaderboardPlayers } from "@/lib/leaderboard";
 
 export default function AdminGameResultPage({ params }: { params: Promise<{ code: string }> }) {
   const unwrappedParams = use(params);
@@ -18,13 +19,16 @@ export default function AdminGameResultPage({ params }: { params: Promise<{ code
 
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [gameTitle, setGameTitle] = useState("Kuis Interaktif");
+  const [totalQuestions, setTotalQuestions] = useState<number>(25);
 
   useEffect(() => {
     fetch(`/api/games/${code}`)
       .then((res) => res.json())
       .then((data) => {
-        if (data.success && data.session?.title) {
-          setGameTitle(data.session.title);
+        if (data.success) {
+          if (data.session?.title) setGameTitle(data.session.title);
+          if (data.session?.totalQuestions) setTotalQuestions(data.session.totalQuestions);
+          else if (data.questions?.length) setTotalQuestions(data.questions.length);
         }
       })
       .catch(() => {});
@@ -42,13 +46,14 @@ export default function AdminGameResultPage({ params }: { params: Promise<{ code
       socket.emit("room:get_state", { code }, (res: any) => {
         if (res.room) {
           setGameTitle(res.room.title || gameTitle);
+          if (res.room.totalQuestions) setTotalQuestions(res.room.totalQuestions);
           if (res.room.players) {
             const sorted = Object.values(res.room.players)
-              .sort((a: any, b: any) => (b.tile || 1) - (a.tile || 1))
+              .sort(compareLeaderboardPlayers)
               .map((p: any, idx: number) => ({
                 ...p,
                 rank: idx + 1,
-                finalTile: p.tile || 1,
+                finalTile: p.tile || p.finalTile || 1,
               }));
             setLeaderboard(sorted);
           }
@@ -56,8 +61,16 @@ export default function AdminGameResultPage({ params }: { params: Promise<{ code
       });
 
       const handleGameFinished = (data: any) => {
+        if (data.totalQuestions) setTotalQuestions(data.totalQuestions);
         if (data.finalLeaderboard) {
-          setLeaderboard(data.finalLeaderboard);
+          const sorted = [...data.finalLeaderboard]
+            .sort(compareLeaderboardPlayers)
+            .map((p: any, idx: number) => ({
+              ...p,
+              rank: idx + 1,
+              finalTile: p.tile || p.finalTile || 1,
+            }));
+          setLeaderboard(sorted);
         }
       };
 
@@ -112,7 +125,7 @@ export default function AdminGameResultPage({ params }: { params: Promise<{ code
                     Petak {top2.finalTile || top2.tile || 1}
                   </span>
                   <span className="text-[10px] text-slate-600 font-bold">
-                    {top2.correctAnswers || 0} Benar
+                    {top2.correctAnswers || 0} / {totalQuestions} Benar
                   </span>
                 </div>
               </div>
@@ -148,7 +161,7 @@ export default function AdminGameResultPage({ params }: { params: Promise<{ code
                     Petak {top1.finalTile || top1.tile || 1}
                   </span>
                   <span className="text-xs text-[#B45309] font-black font-heading">
-                    {top1.correctAnswers || 0} / 25 Benar
+                    {top1.correctAnswers || 0} / {totalQuestions} Benar
                   </span>
                 </div>
               </div>
@@ -184,7 +197,7 @@ export default function AdminGameResultPage({ params }: { params: Promise<{ code
                     Petak {top3.finalTile || top3.tile || 1}
                   </span>
                   <span className="text-[10px] text-slate-600 font-bold">
-                    {top3.correctAnswers || 0} Benar
+                    {top3.correctAnswers || 0} / {totalQuestions} Benar
                   </span>
                 </div>
               </div>
@@ -240,11 +253,11 @@ export default function AdminGameResultPage({ params }: { params: Promise<{ code
                   <td className="py-3.5 text-slate-600 font-medium">{p.playerClass || "-"}</td>
                   <td className="py-3.5 text-center">
                     <Badge variant="default">
-                      Petak {p.finalTile || p.tile || 1} / 25
+                      Petak {p.finalTile || p.tile || 1} / {totalQuestions}
                     </Badge>
                   </td>
                   <td className="py-3.5 text-center font-heading text-emerald-700 font-black">
-                    {p.correctAnswers || 0} / 25
+                    {p.correctAnswers || 0} / {totalQuestions}
                   </td>
                 </tr>
               ))}
