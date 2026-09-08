@@ -70,7 +70,7 @@ export default function PlayerResultPage({ params }: { params: Promise<{ code: s
               .map((p: any, idx: number) => ({
                 ...p,
                 rank: p.rank || idx + 1,
-                finalTile: p.finalTile || p.tile || 1,
+                finalTile: p.correctAnswers !== undefined ? p.correctAnswers : (p.finalTile ?? p.tile ?? 0),
               }));
             setLeaderboard(sorted);
 
@@ -78,7 +78,7 @@ export default function PlayerResultPage({ params }: { params: Promise<{ code: s
               const me = sorted.find((p) => p.id === playerId || p.playerName?.toLowerCase() === playerName.toLowerCase());
               if (me) {
                 setMyRank(me.rank);
-                setMyTile(me.finalTile || me.tile || 1);
+                setMyTile(me.finalTile || 0);
                 setMyCorrect(me.correctAnswers || 0);
                 if (me.avatar) setPlayerAvatar(me.avatar);
               }
@@ -102,7 +102,7 @@ export default function PlayerResultPage({ params }: { params: Promise<{ code: s
               .map((p: any, idx: number) => ({
                 ...p,
                 rank: idx + 1,
-                finalTile: p.tile || p.finalTile || 1,
+                finalTile: p.correctAnswers !== undefined ? p.correctAnswers : (p.tile ?? p.finalTile ?? 0),
               }));
             setLeaderboard(sorted);
 
@@ -110,7 +110,7 @@ export default function PlayerResultPage({ params }: { params: Promise<{ code: s
               const me = sorted.find((p) => p.id === playerId || p.name?.toLowerCase() === playerName.toLowerCase());
               if (me) {
                 setMyRank(me.rank);
-                setMyTile(me.finalTile || me.tile || 1);
+                setMyTile(me.finalTile || 0);
                 setMyCorrect(me.correctAnswers || 0);
                 if (me.avatar) setPlayerAvatar(me.avatar);
               }
@@ -131,14 +131,14 @@ export default function PlayerResultPage({ params }: { params: Promise<{ code: s
           .map((p: any, idx: number) => ({
             ...p,
             rank: idx + 1,
-            finalTile: p.finalTile || p.tile || 1,
+            finalTile: p.correctAnswers !== undefined ? p.correctAnswers : (p.finalTile ?? p.tile ?? 0),
           }));
         setLeaderboard(sorted);
         if (playerId) {
           const me = sorted.find((p: any) => p.id === playerId);
           if (me) {
             setMyRank(me.rank);
-            setMyTile(me.finalTile || me.tile || 1);
+            setMyTile(me.finalTile || 0);
             setMyCorrect(me.correctAnswers || 0);
             if (me.avatar) setPlayerAvatar(me.avatar);
           }

@@ -36,7 +36,7 @@ export default function AdminGameResultPage({ params }: { params: Promise<{ code
               .map((p: any, idx: number) => ({
                 ...p,
                 rank: p.rank || idx + 1,
-                finalTile: p.finalTile || p.tile || 1,
+                finalTile: p.correctAnswers !== undefined ? p.correctAnswers : (p.finalTile ?? p.tile ?? 0),
               }));
             setLeaderboard(sorted);
           }
@@ -65,7 +65,7 @@ export default function AdminGameResultPage({ params }: { params: Promise<{ code
                 .map((p: any, idx: number) => ({
                   ...p,
                   rank: idx + 1,
-                  finalTile: p.tile || p.finalTile || 1,
+                  finalTile: p.correctAnswers !== undefined ? p.correctAnswers : (p.tile ?? p.finalTile ?? 0),
                 }));
               setLeaderboard(sorted);
             }
@@ -84,7 +84,7 @@ export default function AdminGameResultPage({ params }: { params: Promise<{ code
             .map((p: any, idx: number) => ({
               ...p,
               rank: idx + 1,
-              finalTile: p.tile || p.finalTile || 1,
+              finalTile: p.correctAnswers !== undefined ? p.correctAnswers : (p.finalTile ?? p.tile ?? 0),
             }));
           setLeaderboard(sorted);
         }

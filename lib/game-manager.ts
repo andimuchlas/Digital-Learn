@@ -168,7 +168,7 @@ class GameManager {
       playerClass: trimmedClass,
       avatar: avatar || "lion",
       socketId,
-      tile: 1,
+      tile: 0,
       correctAnswers: 0,
       wrongAnswers: 0,
       currentAnswer: null,
@@ -220,7 +220,7 @@ class GameManager {
 
     // Reset all player scores & positions
     for (const player of Object.values(room.players)) {
-      player.tile = 1;
+      player.tile = 0;
       player.correctAnswers = 0;
       player.wrongAnswers = 0;
       player.currentAnswer = null;
@@ -388,8 +388,8 @@ class GameManager {
       const previousTile = player.tile;
 
       if (isCorrect) {
-        player.tile = Math.min(25, player.tile + 1);
         player.correctAnswers++;
+        player.tile = Math.min(room.totalQuestions || 25, player.correctAnswers);
       } else {
         player.wrongAnswers++;
       }

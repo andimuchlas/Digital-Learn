@@ -112,13 +112,13 @@ export function GameBoard({ players, activePlayerResult }: GameBoardProps) {
     }
   }, [activePlayerResult]);
 
-  // Group players by current tile (1-25)
+  // Group players by current tile (0-25)
   const playersByTile: { [key: number]: BoardPlayer[] } = {};
-  for (let i = 1; i <= 25; i++) {
+  for (let i = 0; i <= 25; i++) {
     playersByTile[i] = [];
   }
   players.forEach((p) => {
-    const tileNum = Math.min(25, Math.max(1, p.tile || 1));
+    const tileNum = Math.min(25, Math.max(0, p.tile ?? 0));
     if (!playersByTile[tileNum]) playersByTile[tileNum] = [];
     playersByTile[tileNum].push(p);
   });
@@ -281,6 +281,60 @@ export function GameBoard({ players, activePlayerResult }: GameBoardProps) {
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Starting Zone (Tile 0 - Garis Start) */}
+      <div
+        ref={(el) => {
+          tileRefs.current[0] = el;
+        }}
+        className="mt-4 p-3 sm:p-4 rounded-2xl sm:rounded-3xl bg-slate-50 border-2 border-dashed border-slate-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-inner"
+      >
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 rounded-xl bg-emerald-100 border border-emerald-300 flex items-center justify-center text-emerald-700">
+            <Flag className="w-4 h-4" />
+          </div>
+          <div>
+            <span className="text-xs sm:text-sm font-black text-slate-800 font-heading uppercase tracking-wide">
+              Garis Start (0 Poin)
+            </span>
+            <p className="text-[10px] text-slate-500 font-bold">
+              1 Jawaban Benar = Melompat Maju ke Petak 1
+            </p>
+          </div>
+        </div>
+
+        {/* Players at Start (Tile 0) */}
+        <div className="flex flex-wrap gap-1.5 items-center">
+          {(playersByTile[0] || []).length === 0 ? (
+            <span className="text-[11px] text-slate-400 font-medium italic">
+              Semua pemain sudah melangkah ke lintasan papan 🚀
+            </span>
+          ) : (
+            (playersByTile[0] || []).map((player, idx) => {
+              const style = PLAYER_COLORS[idx % PLAYER_COLORS.length];
+              return (
+                <div
+                  key={player.id}
+                  ref={(el) => {
+                    playerTokenRefs.current[player.id] = el;
+                  }}
+                  title={`${player.name} (${player.playerClass || "Kelas"}) - Garis Start`}
+                  className={`relative group cursor-pointer w-7 h-7 sm:w-9 sm:h-9 rounded-xl overflow-hidden border-2 ${style.border} shadow flex items-center justify-center bg-white transition-transform hover:scale-125`}
+                >
+                  <img
+                    src={getAvatarSrc(player.avatar)}
+                    alt={player.name}
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 bg-[#0F172A] text-white text-[10px] font-bold rounded-xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none z-50">
+                    {player.name} (Garis Start)
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
       </div>
     </div>
   );

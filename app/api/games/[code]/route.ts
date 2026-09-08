@@ -69,17 +69,20 @@ export async function GET(
       .where(eq(playerResults.gameSessionId, session.id))
       .orderBy(playerResults.rank);
 
-    const players = results.map((r) => ({
-      id: r.id,
-      name: r.playerName,
-      playerName: r.playerName,
-      playerClass: r.playerClass,
-      finalTile: r.finalTile,
-      tile: r.finalTile,
-      correctAnswers: r.correctAnswers,
-      totalQuestions: r.totalQuestions,
-      rank: r.rank,
-    }));
+    const players = results.map((r) => {
+      const tileValue = r.correctAnswers !== undefined ? r.correctAnswers : r.finalTile;
+      return {
+        id: r.id,
+        name: r.playerName,
+        playerName: r.playerName,
+        playerClass: r.playerClass,
+        finalTile: tileValue,
+        tile: tileValue,
+        correctAnswers: r.correctAnswers,
+        totalQuestions: r.totalQuestions,
+        rank: r.rank,
+      };
+    });
 
     return NextResponse.json({
       success: true,

@@ -36,8 +36,8 @@ export function compareLeaderboardPlayers(
   }
 
   // 2. Furthest tile (secondary metric)
-  const tileA = pA.finalTile ?? pA.tile ?? 1;
-  const tileB = pB.finalTile ?? pB.tile ?? 1;
+  const tileA = pA.finalTile ?? pA.tile ?? 0;
+  const tileB = pB.finalTile ?? pB.tile ?? 0;
   if (tileB !== tileA) {
     return tileB - tileA;
   }

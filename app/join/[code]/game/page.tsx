@@ -30,7 +30,7 @@ export default function PlayerQuizPage({ params }: { params: Promise<{ code: str
   const [playerName, setPlayerName] = useState<string>("");
   const [playerClass, setPlayerClass] = useState<string>("");
   const [playerAvatar, setPlayerAvatar] = useState<string>("lion");
-  const [currentTile, setCurrentTile] = useState<number>(1);
+  const [currentTile, setCurrentTile] = useState<number>(0);
   const [soundEnabled, setSoundEnabled] = useState(true);
 
   // Question & Game States
@@ -272,7 +272,7 @@ export default function PlayerQuizPage({ params }: { params: Promise<{ code: str
 
           <Badge variant="amber" className="text-xs py-1 px-3 shadow-xs font-heading font-black">
             <Trophy className="w-3.5 h-3.5 text-amber-600 fill-current mr-1" />
-            <span>Petak {currentTile} / 25</span>
+            <span>{currentTile === 0 ? "Garis Start" : `Petak ${currentTile} / 25`}</span>
           </Badge>
         </div>
       </header>
@@ -283,13 +283,11 @@ export default function PlayerQuizPage({ params }: { params: Promise<{ code: str
           <h2 className="text-2xl sm:text-3xl font-black text-[#0F172A] font-heading tracking-tight">
             Kuis Segera Dimulai!
           </h2>
-          <p className="text-xs text-slate-600 font-bold leading-relaxed max-w-xs mx-auto">
-            Pilih jawaban yang benar di HP secepat mungkin untuk memajukan karaktermu di layar depan!
+          <p className="text-xs sm:text-sm text-slate-600 font-bold max-w-sm mx-auto leading-relaxed">
+            Perhatikan proyektor kelas di depan. Jawab setiap soal dengan cepat dan benar untuk memajukan petakmu!
           </p>
-          <div className="pt-2">
-            <span className="font-mono text-7xl font-black text-[#FF5B00] animate-bounce block">
-              {explanationSeconds}
-            </span>
+          <div className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-amber-50 border-2 border-amber-300 text-amber-800 font-heading font-black text-lg">
+            <span>Soal dimulai dalam: {explanationSeconds}s</span>
           </div>
         </Card>
       )}
@@ -365,7 +363,7 @@ export default function PlayerQuizPage({ params }: { params: Promise<{ code: str
                 ) : (
                   <>
                     <XCircle className="w-4 h-4 text-rose-700 stroke-[3]" />
-                    <span>Belum tepat! (Tetap di Petak {currentTile})</span>
+                    <span>Belum tepat! ({currentTile === 0 ? "Tetap di Garis Start" : `Tetap di Petak ${currentTile}`})</span>
                   </>
                 )}
               </div>

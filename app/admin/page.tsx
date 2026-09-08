@@ -620,7 +620,7 @@ export default function AdminDashboardPage() {
                             </td>
                             <td className="p-3 text-center">
                               <Badge variant="default" className="text-[10px]">
-                                Petak {p.finalTile || p.tile || 1} / {selectedHistory.totalQuestions || 25}
+                                Petak {p.correctAnswers !== undefined ? p.correctAnswers : (p.finalTile ?? p.tile ?? 0)} / {selectedHistory.totalQuestions || 25}
                               </Badge>
                             </td>
                             <td className="p-3 text-center font-heading text-emerald-700 font-black">
